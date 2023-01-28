@@ -40,7 +40,7 @@ func NewBot(token string) (*Bot, error) {
 func (b *Bot) PostContent(subreddits []string, title, link string) bool {
 	for i, subreddit := range Subreddits {
 		if flair := b.Ctx.Value(ContextKey("flair")); flair != nil {
-			err := b.Client.SubmitLinkFlair(title, link, subreddit, flair.(string))
+			err := b.Client.SubmitLink(title, link, subreddit, flair.(string))
 			if err != nil {
 				fmt.Println(err)
 				return false
@@ -52,7 +52,7 @@ func (b *Bot) PostContent(subreddits []string, title, link string) bool {
 			continue
 		}
 
-		err := b.Client.SubmitLink(title, link, subreddit)
+		err := b.Client.SubmitLink(title, link, subreddit, "")
 
 		if err != nil {
 			if errors.Is(err, ErrFlairRequired) {
@@ -128,9 +128,9 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 			m := ""
 			for sub, flair := range SelectedFlairs {
 				if flair == "None" {
-					bot.Client.SubmitLink(bot.Ctx.Value(ContextKey("caption")).(string), bot.Ctx.Value(ContextKey("link")).(string), sub)
+					bot.Client.SubmitLink(bot.Ctx.Value(ContextKey("caption")).(string), bot.Ctx.Value(ContextKey("link")).(string), sub, "")
 				} else {
-					bot.Client.SubmitLinkFlair(bot.Ctx.Value(ContextKey("caption")).(string), bot.Ctx.Value(ContextKey("link")).(string), sub, flair)
+					bot.Client.SubmitLink(bot.Ctx.Value(ContextKey("caption")).(string), bot.Ctx.Value(ContextKey("link")).(string), sub, flair)
 				}
 				m += fmt.Sprintf("Subreddit: %s -- Flair: %s\n", sub, flair)
 			}
@@ -182,6 +182,9 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 
 	// If message is a photo or a video, download it
 	switch {
+	case update.Message.Caption == "":
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please add a caption to your post")
+		bot.Send(msg)
 	case update.Message.Photo != nil, update.Message.Video != nil, update.Message.Text == "test":
 		var link string
 		switch {
@@ -226,9 +229,6 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 		keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please select a flair for subreddit "+Subreddits[0])
 		msg.ReplyMarkup = keyboard
-		bot.Send(msg)
-	case update.Message.Caption == "":
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please add a caption to your post")
 		bot.Send(msg)
 	default:
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please send a photo or a video")
