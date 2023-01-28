@@ -11,7 +11,10 @@ import (
 const (
 	BotStateNone = iota
 	BotStateFlair
+	BotStatePost
 )
+
+var SelectedFlairs = map[string]string{}
 
 type ContextKey string
 
@@ -96,11 +99,56 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 	}
 
 	// check ctx state
-	state := bot.Ctx.Value(ContextKey("state")).(int)
-	if state == BotStateFlair && update.Message.Text != "" {
-		state = BotStateNone
-		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("flair"), update.Message.Text)
-		bot.PostContent(bot.Ctx.Value(ContextKey("subreddits")).([]string), bot.Ctx.Value(ContextKey("caption")).(string), bot.Ctx.Value(ContextKey("link")).(string))
+	if state := bot.Ctx.Value(ContextKey("state")).(int); state == BotStateFlair && update.Message.Text != "" {
+		subreddits := bot.Ctx.Value(ContextKey("subreddits")).([]string)
+		if len(subreddits) == 0 {
+			SelectedFlairs[bot.Ctx.Value(ContextKey("subreddit")).(string)] = update.Message.Text
+
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("state"), BotStatePost)
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddit"), nil)
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddits"), []string{})
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("caption"), nil)
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("link"), nil)
+
+			// post content
+			m := ""
+			for sub, flair := range SelectedFlairs {
+				m += fmt.Sprintf("Subreddit: %s -- Flair: %s\n", sub, flair)
+			}
+
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Posting content to the following subreddits:\n"+m)
+			bot.Send(msg)
+
+			return
+		}
+
+		prevSub := bot.Ctx.Value(ContextKey("subreddit")).(string)
+		SelectedFlairs[prevSub] = update.Message.Text
+
+		m := fmt.Sprintf("Selected Flair for subreddit: %s -- %s", prevSub, update.Message.Text)
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, m)
+		bot.Send(msg)
+
+		subreddit := subreddits[0]
+		// add custom keyboard with flairs
+		type f struct {
+			Text string
+		}
+		type fl []f
+		flairs := fl{f{Text: "some text"}, f{Text: "another text"}}
+		// flairs := bot.Client.GetPostFlairs(subreddit)
+		buttons := make([][]tgbotapi.KeyboardButton, len(flairs))
+		for i, flair := range flairs {
+			buttons[i] = []tgbotapi.KeyboardButton{tgbotapi.NewKeyboardButton(flair.Text)}
+		}
+
+		keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Please select a flair for subreddit "+subreddit)
+		msg.ReplyMarkup = keyboard
+		bot.Send(msg)
+
+		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddits"), subreddits[1:])
+		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddit"), subreddit)
 		return
 	}
 
@@ -117,18 +165,37 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, link)
 		bot.Send(msg)
-	case update.Message.Photo != nil:
-		url, err := bot.GetFileDirectURL(update.Message.Photo[len(update.Message.Photo)-1].FileID)
-		if err != nil {
-			panic(err)
+	case update.Message.Photo != nil || update.Message.Text == "test":
+		// url, err := bot.GetFileDirectURL(update.Message.Photo[len(update.Message.Photo)-1].FileID)
+		// if err != nil {
+		// panic(err)
+		// }
+
+		// file := DownloadFile(url)
+		// link := ImgurUpload(file, "image")
+
+		link := "some link"
+		caption := update.Message.Caption
+		if caption == "" {
+			caption = update.Message.Text
 		}
 
-		file := DownloadFile(url)
-		link := ImgurUpload(file, "image")
+		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("link"), link)
+		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("caption"), caption)
+		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddits"), Subreddits[1:])
+		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddit"), Subreddits[0])
+		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("state"), BotStateFlair)
 
-		bot.PostContent(Subreddits, update.Message.Caption, link)
+		// add custom keyboard with flairs
+		flairs := bot.Client.GetPostFlairs(Subreddits[0])
+		buttons := make([][]tgbotapi.KeyboardButton, len(flairs))
+		for i, flair := range flairs {
+			buttons[i] = []tgbotapi.KeyboardButton{tgbotapi.NewKeyboardButton(flair.Text)}
+		}
 
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, link)
+		keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please select a flair for subreddit "+Subreddits[0])
+		msg.ReplyMarkup = keyboard
 		bot.Send(msg)
 	case update.Message.Caption == "":
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please add a caption to your post")
