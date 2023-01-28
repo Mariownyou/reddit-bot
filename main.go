@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -16,6 +17,7 @@ var (
 	ImgurClientID  string
 	TelegramToken  string
 	Subreddits     []string
+	Users          []int64
 )
 
 func init() {
@@ -34,6 +36,15 @@ func init() {
 		Subreddits = strings.Split(subreddits, ",")
 	} else {
 		Subreddits = []string{"test"}
+	}
+
+	if users := os.Getenv("USERS"); users != "" {
+		for _, user := range strings.Split(users, ",") {
+			usr, _ := strconv.Atoi(user)
+			Users = append(Users, int64(usr))
+		}
+	} else {
+		Users = []int64{0}
 	}
 }
 

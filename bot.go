@@ -90,8 +90,24 @@ func (b *Bot) PostContent(subreddits []string, title, link string) bool {
 	return true
 }
 
-func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
+func (bot *Bot) auth(update tgbotapi.Update) bool {
+	id := update.Message.Chat.ID
 	bot.Ctx = context.WithValue(bot.Ctx, ContextKey("chat"), update.Message.Chat.ID)
+	for _, user := range Users {
+		if user == id {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
+	if !bot.auth(update) {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "You are not authorized to use this bot "+fmt.Sprint(update.Message.Chat.ID))
+		bot.Send(msg)
+		return
+	}
 
 	if update.Message == nil {
 		return
