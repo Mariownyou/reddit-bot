@@ -11,7 +11,6 @@ import (
 const (
 	BotStateNone = iota
 	BotStateFlair
-	BotStatePost
 )
 
 var SelectedFlairs = map[string]string{}
@@ -102,49 +101,62 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 	if state := bot.Ctx.Value(ContextKey("state")).(int); state == BotStateFlair && update.Message.Text != "" {
 		subreddits := bot.Ctx.Value(ContextKey("subreddits")).([]string)
 		if len(subreddits) == 0 {
-			SelectedFlairs[bot.Ctx.Value(ContextKey("subreddit")).(string)] = update.Message.Text
-
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("state"), BotStatePost)
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddit"), nil)
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddits"), []string{})
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("caption"), nil)
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("link"), nil)
+			prev := bot.Ctx.Value(ContextKey("subreddit")).(string)
+			if update.Message.Text == "/next" {
+				SelectedFlairs[prev] = "None"
+			} else {
+				SelectedFlairs[prev] = update.Message.Text
+			}
 
 			// post content
 			m := ""
 			for sub, flair := range SelectedFlairs {
+				if flair == "None" {
+					bot.Client.SubmitLink(bot.Ctx.Value(ContextKey("caption")).(string), bot.Ctx.Value(ContextKey("link")).(string), sub)
+				} else {
+					bot.Client.SubmitLinkFlair(bot.Ctx.Value(ContextKey("caption")).(string), bot.Ctx.Value(ContextKey("link")).(string), sub, flair)
+				}
 				m += fmt.Sprintf("Subreddit: %s -- Flair: %s\n", sub, flair)
 			}
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Posting content to the following subreddits:\n"+m)
 			bot.Send(msg)
 
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("state"), BotStateNone)
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddit"), nil)
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddits"), []string{})
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("caption"), nil)
+			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("link"), nil)
+
 			return
 		}
 
 		prevSub := bot.Ctx.Value(ContextKey("subreddit")).(string)
-		SelectedFlairs[prevSub] = update.Message.Text
-
-		m := fmt.Sprintf("Selected Flair for subreddit: %s -- %s", prevSub, update.Message.Text)
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, m)
-		bot.Send(msg)
+		if update.Message.Text == "/next" {
+			SelectedFlairs[prevSub] = "None"
+		} else {
+			SelectedFlairs[prevSub] = update.Message.Text
+			m := fmt.Sprintf("Selected Flair for subreddit: %s -- %s", prevSub, update.Message.Text)
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, m)
+			bot.Send(msg)
+		}
 
 		subreddit := subreddits[0]
 		// add custom keyboard with flairs
-		type f struct {
-			Text string
-		}
-		type fl []f
-		flairs := fl{f{Text: "some text"}, f{Text: "another text"}}
-		// flairs := bot.Client.GetPostFlairs(subreddit)
-		buttons := make([][]tgbotapi.KeyboardButton, len(flairs))
-		for i, flair := range flairs {
-			buttons[i] = []tgbotapi.KeyboardButton{tgbotapi.NewKeyboardButton(flair.Text)}
+		flairs := bot.Client.GetPostFlairs(subreddit)
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Click /next to continue")
+
+		if len(flairs) > 0 {
+			buttons := make([][]tgbotapi.KeyboardButton, len(flairs))
+			for i, flair := range flairs {
+				buttons[i] = []tgbotapi.KeyboardButton{tgbotapi.NewKeyboardButton(flair.Text)}
+			}
+
+			keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Please select a flair for subreddit "+subreddit)
+			msg.ReplyMarkup = keyboard
 		}
 
-		keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Please select a flair for subreddit "+subreddit)
-		msg.ReplyMarkup = keyboard
 		bot.Send(msg)
 
 		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddits"), subreddits[1:])
@@ -166,15 +178,14 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, link)
 		bot.Send(msg)
 	case update.Message.Photo != nil || update.Message.Text == "test":
-		// url, err := bot.GetFileDirectURL(update.Message.Photo[len(update.Message.Photo)-1].FileID)
-		// if err != nil {
-		// panic(err)
-		// }
+		url, err := bot.GetFileDirectURL(update.Message.Photo[len(update.Message.Photo)-1].FileID)
+		if err != nil {
+			panic(err)
+		}
 
-		// file := DownloadFile(url)
-		// link := ImgurUpload(file, "image")
+		file := DownloadFile(url)
+		link := ImgurUpload(file, "image")
 
-		link := "some link"
 		caption := update.Message.Caption
 		if caption == "" {
 			caption = update.Message.Text

@@ -90,7 +90,7 @@ func (c *RedditClient) SubmitLinkFlair(title, url, subreddit, flair string) erro
 func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	flairs, _, err := c.Client.Flair.GetPostFlairs(c.Ctx, subreddit)
 	if err != nil {
-		panic(err)
+		return []*reddit.Flair{}
 	}
 
 	return flairs
