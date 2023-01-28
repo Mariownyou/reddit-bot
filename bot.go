@@ -182,25 +182,28 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 
 	// If message is a photo or a video, download it
 	switch {
-	case update.Message.Video != nil:
-		url, err := bot.GetFileDirectURL(update.Message.Video.FileID)
-		if err != nil {
-			panic(err)
+	case update.Message.Photo != nil, update.Message.Video != nil, update.Message.Text == "test":
+		var link string
+		switch {
+		case update.Message.Text == "test":
+			link = "test link"
+		case update.Message.Photo != nil:
+			url, err := bot.GetFileDirectURL(update.Message.Photo[len(update.Message.Photo)-1].FileID)
+			if err != nil {
+				panic(err)
+			}
+
+			file := DownloadFile(url)
+			link = ImgurUpload(file, "image")
+		case update.Message.Video != nil:
+			url, err := bot.GetFileDirectURL(update.Message.Video.FileID)
+			if err != nil {
+				panic(err)
+			}
+
+			file := DownloadFile(url)
+			link = ImgurUpload(file, "video")
 		}
-
-		file := DownloadFile(url)
-		link := ImgurUpload(file, "video")
-
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, link)
-		bot.Send(msg)
-	case update.Message.Photo != nil || update.Message.Text == "test":
-		url, err := bot.GetFileDirectURL(update.Message.Photo[len(update.Message.Photo)-1].FileID)
-		if err != nil {
-			panic(err)
-		}
-
-		file := DownloadFile(url)
-		link := ImgurUpload(file, "image")
 
 		caption := update.Message.Caption
 		if caption == "" {
