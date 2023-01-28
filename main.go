@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	Debug          bool
 	RedditID       string
 	RedditSecret   string
 	RedditUsername string
@@ -21,9 +22,19 @@ var (
 )
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		panic(err)
+	// check if .env file exists
+	_, err := os.Stat(".env")
+	if err == nil {
+		err := godotenv.Load()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if os.Getenv("DEBUG") == "true" {
+		Debug = true
+	} else {
+		Debug = false
 	}
 
 	RedditID = os.Getenv("REDDIT_CLIENT_ID")
@@ -54,7 +65,7 @@ func main() {
 		panic(err)
 	}
 
-	bot.Debug = true
+	bot.Debug = Debug
 	updateConfig := tgbotapi.NewUpdate(0)
 	updateConfig.Timeout = 30
 
