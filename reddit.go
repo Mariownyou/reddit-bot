@@ -9,7 +9,7 @@ import (
 )
 
 var FlairRequiredText = `POST https://oauth.reddit.com/api/submit: 200 field "flair" caused SUBMIT_VALIDATION_FLAIR_REQUIRED: Your post must contain post flair.`
-var ErrFlairRequired = errors.New("Flair is required")
+var ErrFlairRequired = errors.New("flair is required")
 
 type RedditClient struct {
 	Client *reddit.Client
@@ -75,12 +75,7 @@ func (c *RedditClient) SubmitLinkFlair(title, url, subreddit, flair string) erro
 	})
 
 	if err != nil {
-		switch err.Error() {
-		case FlairRequiredText:
-			return ErrFlairRequired
-		default:
-			return err
-		}
+		return err
 	}
 
 	fmt.Printf("The link post is available at: %s\n", post.URL)
