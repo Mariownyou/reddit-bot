@@ -31,11 +31,9 @@ func DownloadFile(link string) []byte {
 func ImgurUpload(file []byte, filetype string) string {
 	filename := "test." + filetype
 
-	// Create a new buffer
 	buf := new(bytes.Buffer)
-	// Create a new multipart writer
 	w := multipart.NewWriter(buf)
-	// Create a new form file
+
 	var fw io.Writer
 	var err error
 
