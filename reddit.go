@@ -26,20 +26,6 @@ func NewRedditClient() *RedditClient {
 	return &RedditClient{Client: client, Ctx: ctx}
 }
 
-func (c *RedditClient) SubmitText(title, text string) {
-	post, _, err := c.Client.Post.SubmitText(c.Ctx, reddit.SubmitTextRequest{
-		Subreddit: "test",
-		Title:     title,
-		Text:      text,
-	})
-
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("The text post is available at: %s\n", post.URL)
-}
-
 func (c *RedditClient) SubmitLink(title, url, subreddit, flair string) error {
 	// flairs map
 	var post *reddit.Submitted
