@@ -101,6 +101,8 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 				m += fmt.Sprintf("Subreddit: %s -- Flair: %s\n", sub, flair)
 			}
 
+			SelectedFlairs = map[string]string{}
+
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Posting content to the following subreddits:\n"+m)
 			bot.Send(msg)
 
@@ -185,6 +187,8 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 		} else {
 			caption = newCaption
 		}
+
+		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Posting to "+strings.Join(Subs, ", ")))
 
 		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("link"), link)
 		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("caption"), caption)

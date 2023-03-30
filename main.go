@@ -21,11 +21,13 @@ var (
 	Users          []int64
 )
 
+const EnvFile = ".env.local"
+
 func init() {
 	// check if .env file exists
-	_, err := os.Stat(".env")
+	_, err := os.Stat(EnvFile)
 	if err == nil {
-		err := godotenv.Load()
+		err := godotenv.Load(EnvFile)
 		if err != nil {
 			panic(err)
 		}
