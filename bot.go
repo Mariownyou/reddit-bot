@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -13,13 +12,19 @@ const (
 	BotStateFlair
 )
 
-var SelectedFlairs = map[string]string{}
-
-type ContextKey string
+type Context struct {
+	state int
+	subreddit string
+	subreddits []string
+	flairs map[string]string
+	caption string
+	link string
+	chat int64
+}
 
 type Bot struct {
 	tgbotapi.BotAPI
-	Ctx    context.Context
+	Ctx    Context
 	Client *RedditClient
 }
 
@@ -29,17 +34,24 @@ func NewBot(token string) (*Bot, error) {
 		return nil, err
 	}
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, ContextKey("state"), BotStateNone)
-
+	ctx := Context{state: BotStateNone, flairs: map[string]string{}}
 	reddit := NewRedditClient()
 
 	return &Bot{*bot, ctx, reddit}, nil
 }
 
+func (bot *Bot) ChangeContext(state int, subs []string, flairs map[string]string, sub, link, caption string) {
+	bot.Ctx.state = state
+	bot.Ctx.subreddit = sub
+	bot.Ctx.subreddits = subs
+	bot.Ctx.flairs = flairs
+	bot.Ctx.link = link
+	bot.Ctx.caption = caption
+}
+
 func (bot *Bot) auth(update tgbotapi.Update) bool {
 	id := update.Message.Chat.ID
-	bot.Ctx = context.WithValue(bot.Ctx, ContextKey("chat"), update.Message.Chat.ID)
+	bot.Ctx.chat = update.Message.Chat.ID
 	for _, user := range Users {
 		if user == id {
 			return true
@@ -77,23 +89,23 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 	}
 
 	// check ctx state
-	if state := bot.Ctx.Value(ContextKey("state")).(int); state == BotStateFlair && update.Message.Text != "" {
-		subreddits := bot.Ctx.Value(ContextKey("subreddits")).([]string)
+	if state := bot.Ctx.state; state == BotStateFlair && update.Message.Text != "" {
+		subreddits := bot.Ctx.subreddits
 		if len(subreddits) == 0 {
-			prev := bot.Ctx.Value(ContextKey("subreddit")).(string)
+			prev := bot.Ctx.subreddit
 			if update.Message.Text == "/next" {
-				SelectedFlairs[prev] = "None"
+				bot.Ctx.flairs[prev] = "None"
 			} else {
-				SelectedFlairs[prev] = update.Message.Text
+				bot.Ctx.flairs[prev] = update.Message.Text
 			}
 
 			// post content
 			m := ""
-			for sub, flair := range SelectedFlairs {
+			for sub, flair := range bot.Ctx.flairs {
 				if flair == "None" {
 					flair = ""
 				}
-				bot.Client.SubmitLink(bot.Ctx.Value(ContextKey("caption")).(string), bot.Ctx.Value(ContextKey("link")).(string), sub, flair)
+				bot.Client.SubmitLink(bot.Ctx.caption, bot.Ctx.link, sub, flair)
 
 				if flair == "" {
 					flair = "None"
@@ -101,25 +113,18 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 				m += fmt.Sprintf("Subreddit: %s -- Flair: %s\n", sub, flair)
 			}
 
-			SelectedFlairs = map[string]string{}
-
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Posting content to the following subreddits:\n"+m)
 			bot.Send(msg)
 
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("state"), BotStateNone)
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddit"), nil)
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddits"), []string{})
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("caption"), nil)
-			bot.Ctx = context.WithValue(bot.Ctx, ContextKey("link"), nil)
-
+			bot.ChangeContext(BotStateNone, []string{}, map[string]string{}, "", "", "")
 			return
 		}
 
-		prevSub := bot.Ctx.Value(ContextKey("subreddit")).(string)
+		prevSub := bot.Ctx.subreddit
 		if update.Message.Text == "/next" {
-			SelectedFlairs[prevSub] = "None"
+			bot.Ctx.flairs[prevSub] = "None"
 		} else {
-			SelectedFlairs[prevSub] = update.Message.Text
+			bot.Ctx.flairs[prevSub] = update.Message.Text
 			m := fmt.Sprintf("Selected Flair for subreddit: %s -- %s", prevSub, update.Message.Text)
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, m)
 			bot.Send(msg)
@@ -143,8 +148,8 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 
 		bot.Send(msg)
 
-		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddits"), subreddits[1:])
-		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddit"), subreddit)
+		bot.Ctx.subreddits = subreddits[1:]
+		bot.Ctx.subreddit = subreddit
 		return
 	}
 
@@ -189,12 +194,7 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 		}
 
 		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Posting to "+strings.Join(Subs, ", ")))
-
-		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("link"), link)
-		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("caption"), caption)
-		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddits"), Subs[1:])
-		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("subreddit"), Subs[0])
-		bot.Ctx = context.WithValue(bot.Ctx, ContextKey("state"), BotStateFlair)
+		bot.ChangeContext(BotStateFlair, Subs[1:], bot.Ctx.flairs, Subs[0], link, caption)
 
 		// add custom keyboard with flairs
 		flairs := bot.Client.GetPostFlairs(Subs[0])
