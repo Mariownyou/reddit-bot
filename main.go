@@ -21,7 +21,7 @@ var (
 	Users          []int64
 )
 
-const EnvFile = ".env.local"
+const EnvFile = ".env"
 
 func init() {
 	// check if .env file exists
