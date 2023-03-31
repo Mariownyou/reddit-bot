@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -107,7 +109,14 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 				}
 				err := bot.Client.SubmitLink(bot.Ctx.caption, bot.Ctx.link, sub, flair)
 				if err != nil {
+					if strings.Contains(err.Error(), "RATELIMIT") {
+						minsStr := err.Error()[len(err.Error())-5 : len(err.Error())-4]
+						mins, _ := strconv.Atoi(minsStr)
+						fmt.Printf("Rate limit reached, sleeping for %d minutes\n", mins)
+					}
+
 					m += fmt.Sprintf("Error posting to subreddit: %s -- %s\n", sub, err)
+					fmt.Printf("Error posting to subreddit: %s -- %s\n", sub, err)
 					continue
 				}
 
@@ -115,6 +124,8 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 					flair = "None"
 				}
 				m += fmt.Sprintf("Subreddit: %s -- Flair: %s\n", sub, flair)
+
+				time.Sleep(time.Second)
 			}
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Posting content to the following subreddits:\n"+m)
