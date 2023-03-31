@@ -110,14 +110,21 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 				err := bot.Client.SubmitLink(bot.Ctx.caption, bot.Ctx.link, sub, flair)
 				if err != nil {
 					if strings.Contains(err.Error(), "RATELIMIT") {
-						minsStr := err.Error()[len(err.Error())-5 : len(err.Error())-4]
-						mins, _ := strconv.Atoi(minsStr)
-						fmt.Printf("Rate limit reached, sleeping for %d minutes\n", mins)
-					}
+						errorWords := strings.Split(err.Error(), " ")
+						minStr := errorWords[len(errorWords)-5]
+						min, _ := strconv.Atoi(minStr)
+						bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Rate limit reached for %s, retrying in %d minutes", sub, min)))
+						time.Sleep(time.Duration(min) * time.Minute)
+						err = bot.Client.SubmitLink(bot.Ctx.caption, bot.Ctx.link, sub, flair)
 
-					m += fmt.Sprintf("Error posting to subreddit: %s -- %s\n", sub, err)
-					fmt.Printf("Error posting to subreddit: %s -- %s\n", sub, err)
-					continue
+						if err != nil {
+							m += fmt.Sprintf("Error posting to subreddit: %s -- %s\n", sub, err)
+							fmt.Printf("Error posting to subreddit: %s -- %s\n", sub, err)
+						}
+					} else {
+						m += fmt.Sprintf("Error posting to subreddit: %s -- %s\n", sub, err)
+						fmt.Printf("Error posting to subreddit: %s -- %s\n", sub, err)
+					}
 				}
 
 				if flair == "" {
