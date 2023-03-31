@@ -13,13 +13,13 @@ const (
 )
 
 type Context struct {
-	state int
-	subreddit string
+	state      int
+	subreddit  string
 	subreddits []string
-	flairs map[string]string
-	caption string
-	link string
-	chat int64
+	flairs     map[string]string
+	caption    string
+	link       string
+	chat       int64
 }
 
 type Bot struct {
@@ -105,7 +105,11 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 				if flair == "None" {
 					flair = ""
 				}
-				bot.Client.SubmitLink(bot.Ctx.caption, bot.Ctx.link, sub, flair)
+				err := bot.Client.SubmitLink(bot.Ctx.caption, bot.Ctx.link, sub, flair)
+				if err != nil {
+					m += fmt.Sprintf("Error posting to subreddit: %s -- %s\n", sub, err)
+					continue
+				}
 
 				if flair == "" {
 					flair = "None"
