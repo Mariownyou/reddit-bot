@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -91,7 +89,7 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 	}
 
 	// check ctx state
-	if state := bot.Ctx.state; state == BotStateFlair && update.Message.Text != "" {
+	if bot.Ctx.state == BotStateFlair && update.Message.Text != "" {
 		subreddits := bot.Ctx.subreddits
 		if len(subreddits) == 0 {
 			prev := bot.Ctx.subreddit
@@ -101,40 +99,7 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 				bot.Ctx.flairs[prev] = update.Message.Text
 			}
 
-			// post content
-			m := ""
-			for sub, flair := range bot.Ctx.flairs {
-				if flair == "None" {
-					flair = ""
-				}
-				err := bot.Client.SubmitLink(bot.Ctx.caption, bot.Ctx.link, sub, flair)
-				if err != nil {
-					if strings.Contains(err.Error(), "RATELIMIT") {
-						errorWords := strings.Split(err.Error(), " ")
-						minStr := errorWords[len(errorWords)-5]
-						min, _ := strconv.Atoi(minStr)
-						bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Rate limit reached for %s, retrying in %d minutes", sub, min)))
-						time.Sleep(time.Duration(min) * time.Minute)
-						err = bot.Client.SubmitLink(bot.Ctx.caption, bot.Ctx.link, sub, flair)
-
-						if err != nil {
-							m += fmt.Sprintf("Error posting to subreddit: %s -- %s\n", sub, err)
-							fmt.Printf("Error posting to subreddit: %s -- %s\n", sub, err)
-						}
-					} else {
-						m += fmt.Sprintf("Error posting to subreddit: %s -- %s\n", sub, err)
-						fmt.Printf("Error posting to subreddit: %s -- %s\n", sub, err)
-					}
-				}
-
-				if flair == "" {
-					flair = "None"
-				}
-				m += fmt.Sprintf("Subreddit: %s -- Flair: %s\n", sub, flair)
-
-				time.Sleep(time.Second)
-			}
-
+			m := bot.Client.SubmitPosts(bot.Ctx.flairs, bot.Ctx.caption, bot.Ctx.link, bot.Ctx.subreddit)
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Posting content to the following subreddits:\n"+m)
 			bot.Send(msg)
 
