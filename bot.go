@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
 
 const (
@@ -77,6 +78,21 @@ func findSubredditsInMessage(message string) (bool, string, []string) {
 	return false, message, subreddits
 }
 
+func NewFlairMessage(flairs []*reddit.Flair, subreddit string, chatID int64) tgbotapi.MessageConfig {
+	if len(flairs) == 0 || (len(flairs) == 1 && flairs[0].Text == "") {
+		return tgbotapi.NewMessage(chatID, "Click /next to continue")
+	}
+
+	buttons := make([][]tgbotapi.KeyboardButton, len(flairs))
+	for i, flair := range flairs {
+		buttons[i] = []tgbotapi.KeyboardButton{tgbotapi.NewKeyboardButton(flair.Text)}
+	}
+	keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
+	msg := tgbotapi.NewMessage(chatID, "Please select a flair for subreddit "+subreddit)
+	msg.ReplyMarkup = keyboard
+	return msg
+}
+
 func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 	if !bot.auth(update) {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "You are not authorized to use this bot "+fmt.Sprint(update.Message.Chat.ID))
@@ -99,9 +115,22 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 				bot.Ctx.flairs[prev] = update.Message.Text
 			}
 
-			m := bot.Client.SubmitPosts(bot.Ctx.flairs, bot.Ctx.caption, bot.Ctx.link, bot.Ctx.subreddit)
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Posting content to the following subreddits:\n"+m)
+			out := make(chan string)
+			var message string
+
+			for key, value := range bot.Ctx.flairs {
+				message += fmt.Sprintf("%s: %s\n Awaiting...", key, value)
+			}
+
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Posting content to the following subreddits:\n"+message)
 			bot.Send(msg)
+
+			go bot.Client.SubmitPosts(out, bot.Ctx.flairs, bot.Ctx.caption, bot.Ctx.link, bot.Ctx.subreddit)
+
+			for m := range out {
+				msg := tgbotapi.NewEditMessageText(update.Message.Chat.ID, update.Message.MessageID+1, m)
+				bot.Send(msg)
+			}
 
 			bot.ChangeContext(BotStateNone, []string{}, map[string]string{}, "", "", "")
 			return
@@ -118,21 +147,8 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 		}
 
 		subreddit := subreddits[0]
-		// add custom keyboard with flairs
 		flairs := bot.Client.GetPostFlairs(subreddit)
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Click /next to continue")
-
-		if len(flairs) > 0 {
-			buttons := make([][]tgbotapi.KeyboardButton, len(flairs))
-			for i, flair := range flairs {
-				buttons[i] = []tgbotapi.KeyboardButton{tgbotapi.NewKeyboardButton(flair.Text)}
-			}
-
-			keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
-			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Please select a flair for subreddit "+subreddit)
-			msg.ReplyMarkup = keyboard
-		}
-
+		msg := NewFlairMessage(flairs, subreddit, update.Message.Chat.ID)
 		bot.Send(msg)
 
 		bot.Ctx.subreddits = subreddits[1:]
@@ -185,14 +201,7 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 
 		// add custom keyboard with flairs
 		flairs := bot.Client.GetPostFlairs(Subs[0])
-		buttons := make([][]tgbotapi.KeyboardButton, len(flairs))
-		for i, flair := range flairs {
-			buttons[i] = []tgbotapi.KeyboardButton{tgbotapi.NewKeyboardButton(flair.Text)}
-		}
-
-		keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please select a flair for subreddit "+Subs[0])
-		msg.ReplyMarkup = keyboard
+		msg := NewFlairMessage(flairs, Subs[0], update.Message.Chat.ID)
 		bot.Send(msg)
 	default:
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please send a photo or a video")

@@ -14,6 +14,16 @@ import (
 var FlairRequiredText = `POST https://oauth.reddit.com/api/submit: 200 field "flair" caused SUBMIT_VALIDATION_FLAIR_REQUIRED: Your post must contain post flair.`
 var ErrFlairRequired = errors.New("flair is required")
 
+type Progress map[string]string
+
+func (p Progress) String() string {
+	var str string
+	for k, v := range p {
+		str += fmt.Sprintf("%s: %s\n", k, v)
+	}
+	return str
+}
+
 type RedditClient struct {
 	Client *reddit.Client
 	Ctx    context.Context
@@ -51,21 +61,35 @@ func (c *RedditClient) NewSubmitLinkRequest(title, url, subreddit, flair string)
 	}
 }
 
-func (c *RedditClient) SubmitLink(title, url, subreddit, flair string) error {
-	var post *reddit.Submitted
-	var err error
-
-	submitLinkRequest := c.NewSubmitLinkRequest(title, url, subreddit, flair)
-	post, _, err = c.Client.Post.SubmitLink(c.Ctx, submitLinkRequest)
+func (c *RedditClient) submitLink(submitLinkRequest reddit.SubmitLinkRequest, out chan string, retry int) {
+	post, _, err := c.Client.Post.SubmitLink(c.Ctx, submitLinkRequest)
+	// err = errors.New("RATELIMIT: you are doing that too much. try again in 2 min min min minutes.")
 
 	if err != nil {
-		// try to send post 3 more times
-		// TODO handle rate limit
-		return err
-	}
+		if strings.Contains(err.Error(), "RATELIMIT") && retry < 3 {
+			errorWords := strings.Split(err.Error(), " ")
+			minStr := errorWords[len(errorWords)-5]
+			min, _ := strconv.Atoi(minStr)
 
-	fmt.Printf("The link post is available at: %s\n", post.URL)
-	return nil
+			for i := 0; i <= min+1; i++ {
+				out <- fmt.Sprintf("Waiting %d minutes to retry post\n", min-i)
+				time.Sleep(time.Minute)
+			}
+
+			c.submitLink(submitLinkRequest, out, retry+1)
+		} else {
+			out <- fmt.Sprintf("Error submitting post: %s\n", err)
+			return
+		}
+	} else {
+		out <- fmt.Sprintf("The post is available at: %s\n", post.URL)
+	}
+}
+
+func (c *RedditClient) SubmitLink(out chan string, title, url, subreddit, flair string) {
+	submitLinkRequest := c.NewSubmitLinkRequest(title, url, subreddit, flair)
+	c.submitLink(submitLinkRequest, out, 0)
+	close(out)
 }
 
 func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
@@ -78,41 +102,25 @@ func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	return flairs
 }
 
-func (c *RedditClient) SubmitPosts(flairs map[string]string, caption, link, sub string) string {
-	m := ""
+func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption, link, sub string) {
+	progress := flairs
+
 	for sub, flair := range flairs {
 		if flair == "None" {
 			flair = ""
 		}
-		err := c.SubmitLink(caption, link, sub, flair)
-		if err != nil {
-			if strings.Contains(err.Error(), "RATELIMIT") {
-				errorWords := strings.Split(err.Error(), " ")
-				minStr := errorWords[len(errorWords)-5]
-				min, _ := strconv.Atoi(minStr)
-				// bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Rate limit reached for %s, retrying in %d minutes", sub, min)))
-				time.Sleep(time.Duration(min+2) * time.Minute)
-				err = c.SubmitLink(caption, link, sub, flair)
 
-				if err != nil {
-					m += fmt.Sprintf("Error posting to subreddit: %s -- %s\n", sub, err)
-					fmt.Printf("Error posting to subreddit: %s -- %s\n", sub, err)
-				} else {
-					// bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Successfully posted to %s", sub)))
-				}
-			} else {
-				m += fmt.Sprintf("Error posting to subreddit: %s -- %s\n", sub, err)
-				fmt.Printf("Error posting to subreddit: %s -- %s\n", sub, err)
-			}
+		submitChan := make(chan string)
+		go c.SubmitLink(submitChan, caption, link, sub, flair)
+
+		for msg := range submitChan {
+			progress[sub] = msg
+			out <- Progress(progress).String()
 		}
 
-		if flair == "" {
-			flair = "None"
-		}
-		m += fmt.Sprintf("Subreddit: %s -- Flair: %s\n", sub, flair)
-
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 3)
 	}
 
-	return m
+	out <- Progress(progress).String()
+	close(out)
 }
