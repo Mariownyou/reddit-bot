@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -100,5 +101,6 @@ func ImgurUpload(file []byte, filetype string) string {
 	}
 
 	// Return the link
+	fmt.Printf("Imgur Link: %s\nResponse: %s\n", link, string(body))
 	return link
 }
