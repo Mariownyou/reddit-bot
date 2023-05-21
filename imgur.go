@@ -7,6 +7,8 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+
+	"github.com/mariownyou/go-reddit-submit-image/submit_image"
 )
 
 const (
@@ -102,5 +104,19 @@ func ImgurUpload(file []byte, filetype string) string {
 
 	// Return the link
 	fmt.Printf("Imgur Link: %s\nResponse: %s\n", link, string(body))
+	return link
+}
+
+func RedditUpload(file []byte, filetype string) string {
+	accessToken, err := submit_image.GetAccessToken(RedditUsername, RedditPassword, RedditID, RedditSecret)
+	if err != nil {
+		panic(err)
+	}
+
+	link, err := submit_image.UploadMedia(accessToken, file, filetype)
+	if err != nil {
+		panic(err)
+	}
+
 	return link
 }

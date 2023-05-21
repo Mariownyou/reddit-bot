@@ -173,7 +173,7 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 			}
 
 			file := DownloadFile(url)
-			link = ImgurUpload(file, "image")
+			link = RedditUpload(file, "image")
 		case update.Message.Video != nil:
 			url, err := bot.GetFileDirectURL(update.Message.Video.FileID)
 			if err != nil {

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mariownyou/go-reddit-submit-image/submit_image"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
 
@@ -91,21 +90,6 @@ func (c *RedditClient) SubmitLink(out chan string, title, url, subreddit, flair 
 	submitLinkRequest := c.NewSubmitLinkRequest(title, url, subreddit, flair)
 	c.submitLink(submitLinkRequest, out, 0)
 	close(out)
-}
-
-func (c *RedditClient) submitMedia(out chan string, title, filepath, subreddit, flair string) {
-	accessToken, err := submit_image.GetAccessToken(RedditUsername, RedditPassword, RedditID, RedditSecret)
-	if err != nil {
-		out <- fmt.Sprintf("Error getting access token: %s\n", err)
-		return
-	}
-
-	mediaLink, err := submit_image.UploadMedia(filepath, accessToken)
-	if err != nil {
-		out <- fmt.Sprintf("Error uploading media: %s\n", err)
-		return
-	}
-	c.SubmitLink(out, title, mediaLink, subreddit, flair)
 }
 
 func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
