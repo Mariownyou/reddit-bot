@@ -8,7 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	"github.com/mariownyou/go-reddit-submit-image/submit_image"
+	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
 )
 
 const (
@@ -108,12 +108,9 @@ func ImgurUpload(file []byte, filetype string) string {
 }
 
 func RedditUpload(file []byte, filetype string) string {
-	accessToken, err := submit_image.GetAccessToken(RedditUsername, RedditPassword, RedditID, RedditSecret)
-	if err != nil {
-		panic(err)
-	}
+	client := reddit_uploader.New(RedditUsername, RedditPassword, RedditID, RedditSecret)
 
-	link, err := submit_image.UploadMedia(accessToken, file, filetype)
+	link, err := client.UploadMedia(file, filetype)
 	if err != nil {
 		panic(err)
 	}
