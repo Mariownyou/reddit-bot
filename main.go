@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
+	"github.com/mariownyou/reddit-bot/fsm"
 )
 
 var (
@@ -19,9 +19,12 @@ var (
 	TelegramToken  string
 	Subreddits     []string
 	Users          []int64
+
+	BOT     *Bot
+	MANAGER *fsm.Manager
 )
 
-const EnvFile = ".env"
+const EnvFile = ".env.local"
 
 func init() {
 	// check if .env file exists
@@ -62,17 +65,28 @@ func init() {
 }
 
 func main() {
-	bot, err := NewBot(TelegramToken)
+	var err error
+
+	BOT, err = NewBot(TelegramToken)
 	if err != nil {
 		panic(err)
 	}
 
-	bot.Debug = Debug
-	updateConfig := tgbotapi.NewUpdate(0)
-	updateConfig.Timeout = 30
-
-	updates := bot.GetUpdatesChan(updateConfig)
-	for update := range updates {
-		bot.UpdateHandler(update)
+	MANAGER = &fsm.Manager{
+		BotAPI: BOT.BotAPI,
+		State:  fsm.DefaultState,
+		Data:   fsm.Context{},
 	}
+
+	MANAGER.Data.Set("flairs", map[string]string{})
+
+	// Submit post states
+	MANAGER.Handle(fsm.PhotoContentType, fsm.DefaultState, postHandler)
+	MANAGER.Handle(fsm.VideoContentType, fsm.DefaultState, postHandler)
+
+	MANAGER.Handle("*", fsm.AwaitFlairMessageState, awaitFlairMessage)
+	MANAGER.Bind(fsm.CreateFlairMessageState, createFlairMessage)
+	MANAGER.Bind(fsm.SubmitPostState, submitPostBind)
+
+	MANAGER.Run()
 }
