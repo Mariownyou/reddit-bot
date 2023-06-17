@@ -102,7 +102,7 @@ func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	return flairs
 }
 
-func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption, link, sub string) {
+func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption, link string) {
 	progress := flairs
 
 	for sub, flair := range flairs {

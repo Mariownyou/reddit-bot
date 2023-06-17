@@ -18,13 +18,25 @@ func postHandler(u tgbotapi.Update) {
 		caption = strings.TrimSpace(newCaption)
 	}
 
+	fileURL := BOT.GetFileURL(u)
+	file := DownloadFile(fileURL)
+	var link string
+
+	switch {
+	case u.Message.Photo != nil:
+		link = RedditUpload(file, "jpg")
+	case u.Message.Video != nil:
+		link = ImgurUpload(file, "video")
+	}
+
+	MANAGER.Data.Set("link", link)
 	MANAGER.Data.Set("caption", caption)
 	MANAGER.Data.Set("subs", Subs)
 
 	MANAGER.SetState(fsm.CreateFlairMessageState)
 }
 
-func awaitFlairMessage(u tgbotapi.Update) {
+func awaitFlairMessageBind(u tgbotapi.Update) {
 	flair := u.Message.Text
 	flairMap := MANAGER.Data.Get("flairs").(map[string]string)
 	subs := MANAGER.Data.Get("subs").([]string)
@@ -45,15 +57,14 @@ func awaitFlairMessage(u tgbotapi.Update) {
 	MANAGER.SetState(fsm.CreateFlairMessageState)
 }
 
-func createFlairMessage(u tgbotapi.Update) fsm.State {
+func createFlairMessageBind(u tgbotapi.Update) fsm.State {
 	// caption := manager.Data.Get("caption").(string)
 	subs := MANAGER.Data.Get("subs").([]string)
 	sub := subs[0]
 
 	flairs := BOT.Client.GetPostFlairs(sub)
-	fmt.Println(flairs)
 
-	if len(flairs) == 0 {
+	if len(flairs) <= 1 {
 		MANAGER.Data.Set("subs", subs[1:])
 		flairsMap := MANAGER.Data.Get("flairs").(map[string]string)
 
@@ -62,16 +73,18 @@ func createFlairMessage(u tgbotapi.Update) fsm.State {
 
 		if len(MANAGER.Data.Get("subs").([]string)) == 0 {
 			fmt.Println("map", MANAGER.Data.Get("flairs").(map[string]string))
+			m := fmt.Sprintf("No flairs found for sub %s, posting without flair", sub)
 
-			msg := tgbotapi.NewMessage(u.Message.Chat.ID, "No flairs found, posting without flair")
+			msg := tgbotapi.NewMessage(u.Message.Chat.ID, m)
 			BOT.Send(msg)
 
 			return fsm.SubmitPostState
 		}
 
-		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "No flairs found, go to the next subreddit")
+		m := fmt.Sprintf("No flairs found for sub %s, go to the next subreddit", sub)
+		msg := tgbotapi.NewMessage(u.Message.Chat.ID, m)
 		BOT.Send(msg)
-		return createFlairMessage(u)
+		return createFlairMessageBind(u)
 	}
 
 	msg := NewFlairMessage(flairs, sub, u.Message.Chat.ID)
@@ -81,14 +94,36 @@ func createFlairMessage(u tgbotapi.Update) fsm.State {
 }
 
 func submitPostBind(u tgbotapi.Update) fsm.State {
-
-	m := ""
+	var m string
+	out := make(chan string)
+	flairs := MANAGER.Data.Get("flairs").(map[string]string)
+	caption := MANAGER.Data.Get("caption").(string)
+	link := MANAGER.Data.Get("link").(string)
 
 	for sub, flair := range MANAGER.Data.Get("flairs").(map[string]string) {
-		m += fmt.Sprintf("%s - %s\n", sub, flair)
+		m += fmt.Sprintf("%s - %s awaiting...\n", sub, flair)
 	}
 
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Posting image... with flairs\n"+m)
-	BOT.Send(msg)
+	m += fmt.Sprintf("Title: %s\n", caption)
+	m += fmt.Sprintf("Content Link: %s\n", link)
+
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Posting content to the following subreddits with flairs:\n"+m)
+	msgObj, _ := BOT.Send(msg)
+	mID := msgObj.MessageID
+
+	go BOT.Client.SubmitPosts(out, flairs, caption, link)
+
+	for m := range out {
+		m += fmt.Sprintf("Title: %s\n", caption)
+		m += fmt.Sprintf("Content Link: %s\n", link)
+		msg := tgbotapi.NewEditMessageText(u.Message.Chat.ID, mID, m)
+
+		BOT.Send(msg)
+	}
+
+	MANAGER.Data.Set("flairs", make(map[string]string))
+	MANAGER.Data.Set("caption", "")
+	MANAGER.Data.Set("link", "")
+
 	return fsm.DefaultState
 }

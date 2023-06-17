@@ -93,6 +93,24 @@ func NewFlairMessage(flairs []*reddit.Flair, subreddit string, chatID int64) tgb
 	return msg
 }
 
+func (bot *Bot) GetFileURL(u tgbotapi.Update) string {
+	var fileID string
+
+	if u.Message.Photo != nil {
+		fileID = u.Message.Photo[len(u.Message.Photo)-1].FileID
+	}
+	if u.Message.Video != nil {
+		fileID = u.Message.Video.FileID
+	}
+
+	url, err := bot.GetFileDirectURL(fileID)
+	if err != nil {
+		panic(err)
+	}
+
+	return url
+}
+
 func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 	if !bot.auth(update) {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "You are not authorized to use this bot "+fmt.Sprint(update.Message.Chat.ID))
@@ -125,7 +143,7 @@ func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Posting content to the following subreddits:\n"+message)
 			bot.Send(msg)
 
-			go bot.Client.SubmitPosts(out, bot.Ctx.flairs, bot.Ctx.caption, bot.Ctx.link, bot.Ctx.subreddit)
+			go bot.Client.SubmitPosts(out, bot.Ctx.flairs, bot.Ctx.caption, bot.Ctx.link)
 
 			for m := range out {
 				msg := tgbotapi.NewEditMessageText(update.Message.Chat.ID, update.Message.MessageID+1, m)
