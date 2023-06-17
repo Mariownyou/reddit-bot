@@ -25,11 +25,11 @@ func (h HandlerInfo) isValid(update tgbotapi.Update, state State) bool {
 			(strings.HasPrefix(update.Message.Text, (h.filter).(string)) || h.filter == "*")
 	case ContentType:
 		switch filter {
-		case TextContentType:
+		case OnText:
 			return (h.state == state || h.state == AnyState) && update.Message.Text != ""
-		case PhotoContentType:
+		case OnPhoto:
 			return (h.state == state || h.state == AnyState) && update.Message.Photo != nil
-		case VideoContentType:
+		case OnVideo:
 			return (h.state == state || h.state == AnyState) && update.Message.Video != nil
 		}
 	}

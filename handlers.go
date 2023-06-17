@@ -9,7 +9,7 @@ import (
 )
 
 func postHandler(u tgbotapi.Update) {
-	caption := u.Message.Text
+	caption := u.Message.Caption
 
 	isSubs, newCaption, Subs := findSubredditsInMessage(caption)
 	if !isSubs {
@@ -81,7 +81,14 @@ func createFlairMessage(u tgbotapi.Update) fsm.State {
 }
 
 func submitPostBind(u tgbotapi.Update) fsm.State {
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Posting image...")
+
+	m := ""
+
+	for sub, flair := range MANAGER.Data.Get("flairs").(map[string]string) {
+		m += fmt.Sprintf("%s - %s\n", sub, flair)
+	}
+
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Posting image... with flairs\n"+m)
 	BOT.Send(msg)
 	return fsm.DefaultState
 }

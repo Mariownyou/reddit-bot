@@ -10,9 +10,9 @@ const (
 	AwaitFlairMessageState
 	SubmitPostState
 
-	TextContentType ContentType = iota
-	PhotoContentType
-	VideoContentType
+	OnText ContentType = iota
+	OnPhoto
+	OnVideo
 )
 
 type State int

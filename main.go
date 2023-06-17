@@ -81,10 +81,10 @@ func main() {
 	MANAGER.Data.Set("flairs", map[string]string{})
 
 	// Submit post states
-	MANAGER.Handle(fsm.PhotoContentType, fsm.DefaultState, postHandler)
-	MANAGER.Handle(fsm.VideoContentType, fsm.DefaultState, postHandler)
+	MANAGER.Handle(fsm.OnPhoto, fsm.DefaultState, postHandler)
+	MANAGER.Handle(fsm.OnVideo, fsm.DefaultState, postHandler)
 
-	MANAGER.Handle("*", fsm.AwaitFlairMessageState, awaitFlairMessage)
+	MANAGER.Handle(fsm.OnText, fsm.AwaitFlairMessageState, awaitFlairMessage)
 	MANAGER.Bind(fsm.CreateFlairMessageState, createFlairMessage)
 	MANAGER.Bind(fsm.SubmitPostState, submitPostBind)
 
