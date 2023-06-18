@@ -58,6 +58,14 @@ type Manager struct {
 	commands []Command
 }
 
+func NewManager(bot tgbotapi.BotAPI) *Manager {
+	return &Manager{
+		BotAPI: bot,
+		State:  DefaultState,
+		Data:   NewContext(),
+	}
+}
+
 func (m *Manager) Run(middlewares ...middlewareFunc) {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

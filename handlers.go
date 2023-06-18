@@ -121,9 +121,7 @@ func submitPostBind(u tgbotapi.Update) fsm.State {
 		BOT.Send(msg)
 	}
 
-	MANAGER.Data.Set("flairs", make(map[string]string))
-	MANAGER.Data.Set("caption", "")
-	MANAGER.Data.Set("link", "")
+	MANAGER.Data = fsm.NewContext()
 
 	return fsm.DefaultState
 }

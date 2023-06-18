@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 	"github.com/mariownyou/reddit-bot/fsm"
 )
@@ -72,13 +73,7 @@ func main() {
 		panic(err)
 	}
 
-	MANAGER = &fsm.Manager{
-		BotAPI: BOT.BotAPI,
-		State:  fsm.DefaultState,
-		Data:   fsm.Context{},
-	}
-
-	MANAGER.Data.Set("flairs", map[string]string{})
+	MANAGER = fsm.NewManager(BOT.BotAPI)
 
 	// Submit post states
 	MANAGER.Handle(fsm.OnPhoto, fsm.DefaultState, postHandler)
@@ -87,6 +82,12 @@ func main() {
 	MANAGER.Handle(fsm.OnText, fsm.AwaitFlairMessageState, awaitFlairMessageBind)
 	MANAGER.Bind(fsm.CreateFlairMessageState, createFlairMessageBind)
 	MANAGER.Bind(fsm.SubmitPostState, submitPostBind)
+
+	// Helpers
+	MANAGER.Handle(fsm.OnText, fsm.AnyState, func(u tgbotapi.Update) {
+		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video with caption")
+		BOT.Send(msg)
+	})
 
 	MANAGER.Run()
 }
