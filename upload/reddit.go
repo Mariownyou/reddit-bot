@@ -1,15 +1,32 @@
-package main
+package upload
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
+
+var (
+	RedditID       string
+	RedditSecret   string
+	RedditUsername string
+	RedditPassword string
+	ImgurClientID  string
+)
+
+func init() {
+	RedditID = os.Getenv("REDDIT_CLIENT_ID")
+	RedditSecret = os.Getenv("REDDIT_CLIENT_SECRET")
+	RedditUsername = os.Getenv("REDDIT_USERNAME")
+	RedditPassword = os.Getenv("REDDIT_PASSWORD")
+	ImgurClientID = os.Getenv("IMGUR_CLIENT_ID")
+}
 
 var FlairRequiredText = `POST https://oauth.reddit.com/api/submit: 200 field "flair" caused SUBMIT_VALIDATION_FLAIR_REQUIRED: Your post must contain post flair.`
 var ErrFlairRequired = errors.New("flair is required")

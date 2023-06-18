@@ -1,4 +1,4 @@
-package fsm
+package bot
 
 const (
 	DefaultState State = iota

@@ -2,27 +2,21 @@ package main
 
 import (
 	"os"
-	"strconv"
-	"strings"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
-	"github.com/mariownyou/reddit-bot/fsm"
+	"github.com/mariownyou/reddit-bot/bot"
 )
 
 var (
-	Debug          bool
-	RedditID       string
-	RedditSecret   string
-	RedditUsername string
-	RedditPassword string
-	ImgurClientID  string
-	TelegramToken  string
-	Subreddits     []string
-	Users          []int64
-
-	BOT     *Bot
-	MANAGER *fsm.Manager
+	Debug bool
+	// RedditID       string
+	// RedditSecret   string
+	// RedditUsername string
+	// RedditPassword string
+	// ImgurClientID  string
+	TelegramToken string
+	// Subreddits    []string
+	// Users         []int64
 )
 
 const EnvFile = ".env.local"
@@ -43,51 +37,49 @@ func init() {
 		Debug = false
 	}
 
-	RedditID = os.Getenv("REDDIT_CLIENT_ID")
-	RedditSecret = os.Getenv("REDDIT_CLIENT_SECRET")
-	RedditUsername = os.Getenv("REDDIT_USERNAME")
-	RedditPassword = os.Getenv("REDDIT_PASSWORD")
-	ImgurClientID = os.Getenv("IMGUR_CLIENT_ID")
+	// RedditID = os.Getenv("REDDIT_CLIENT_ID")
+	// RedditSecret = os.Getenv("REDDIT_CLIENT_SECRET")
+	// RedditUsername = os.Getenv("REDDIT_USERNAME")
+	// RedditPassword = os.Getenv("REDDIT_PASSWORD")
+	// ImgurClientID = os.Getenv("IMGUR_CLIENT_ID")
 	TelegramToken = os.Getenv("TELEGRAM_TOKEN")
-	if subreddits := os.Getenv("SUBREDDITS"); subreddits != "" {
-		Subreddits = strings.Split(subreddits, ",")
-	} else {
-		Subreddits = []string{"test"}
-	}
+	// if subreddits := os.Getenv("SUBREDDITS"); subreddits != "" {
+	// 	Subreddits = strings.Split(subreddits, ",")
+	// } else {
+	// 	Subreddits = []string{"test"}
+	// }
 
-	if users := os.Getenv("USERS"); users != "" {
-		for _, user := range strings.Split(users, ",") {
-			usr, _ := strconv.Atoi(user)
-			Users = append(Users, int64(usr))
-		}
-	} else {
-		Users = []int64{0}
-	}
+	// if users := os.Getenv("USERS"); users != "" {
+	// 	for _, user := range strings.Split(users, ",") {
+	// 		usr, _ := strconv.Atoi(user)
+	// 		Users = append(Users, int64(usr))
+	// 	}
+	// } else {
+	// 	Users = []int64{0}
+	// }
 }
 
 func main() {
-	var err error
-
-	BOT, err = NewBot(TelegramToken)
+	b, err := bot.NewBot(TelegramToken)
 	if err != nil {
 		panic(err)
 	}
 
-	MANAGER = fsm.NewManager(BOT.BotAPI)
+	manager := bot.NewManager(*b)
 
 	// Submit post states
-	MANAGER.Handle(fsm.OnPhoto, fsm.DefaultState, postHandler)
-	MANAGER.Handle(fsm.OnVideo, fsm.DefaultState, postHandler)
+	manager.Handle(bot.OnPhoto, bot.DefaultState, bot.PostHandler)
+	manager.Handle(bot.OnVideo, bot.DefaultState, bot.PostHandler)
 
-	MANAGER.Handle(fsm.OnText, fsm.AwaitFlairMessageState, awaitFlairMessageBind)
-	MANAGER.Bind(fsm.CreateFlairMessageState, createFlairMessageBind)
-	MANAGER.Bind(fsm.SubmitPostState, submitPostBind)
+	manager.Handle(bot.OnText, bot.AwaitFlairMessageState, bot.AwaitFlairMessageBind)
+	manager.Bind(bot.CreateFlairMessageState, bot.CreateFlairMessageBind)
+	manager.Bind(bot.SubmitPostState, bot.SubmitPostBind)
 
 	// Helpers
-	MANAGER.Handle(fsm.OnText, fsm.AnyState, func(u tgbotapi.Update) {
-		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video with caption")
-		BOT.Send(msg)
-	})
+	// MANAGER.Handle(bot.OnText, bot.AnyState, func(u tgbotapi.Update) {
+	// 	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video with caption")
+	// 	BOT.Send(msg)
+	// })
 
-	MANAGER.Run()
+	manager.Run()
 }

@@ -1,4 +1,4 @@
-package fsm
+package bot
 
 import (
 	"strings"
@@ -10,7 +10,7 @@ type Command interface {
 	isValid(tgbotapi.Update, State) bool
 }
 
-type Handler func(tgbotapi.Update)
+type Handler func(*Manager, tgbotapi.Update)
 
 type HandlerInfo struct {
 	filter  interface{}
@@ -37,7 +37,7 @@ func (h HandlerInfo) isValid(update tgbotapi.Update, state State) bool {
 	return false
 }
 
-type Binder func(tgbotapi.Update) State
+type Binder func(*Manager, tgbotapi.Update) State
 
 type BinderInfo struct {
 	state  State
@@ -49,20 +49,20 @@ func (b BinderInfo) isValid(update tgbotapi.Update, state State) bool {
 }
 
 type processFunc func(tgbotapi.Update)
-type middlewareFunc func(tgbotapi.BotAPI, tgbotapi.Update, processFunc) processFunc
+type middlewareFunc func(Bot, tgbotapi.Update, processFunc) processFunc
 
 type Manager struct {
-	tgbotapi.BotAPI
+	Bot
 	State    State
 	Data     Context
 	commands []Command
 }
 
-func NewManager(bot tgbotapi.BotAPI) *Manager {
+func NewManager(bot Bot) *Manager {
 	return &Manager{
-		BotAPI: bot,
-		State:  DefaultState,
-		Data:   NewContext(),
+		Bot:   bot,
+		State: DefaultState,
+		Data:  NewContext(),
 	}
 }
 
@@ -76,7 +76,7 @@ func (m *Manager) Run(middlewares ...middlewareFunc) {
 		if middlewares != nil {
 			process := m.process
 			for _, middleware := range middlewares {
-				process = middleware(m.BotAPI, update, process)
+				process = middleware(m.Bot, update, process)
 			}
 			process(update)
 		} else {
@@ -99,10 +99,10 @@ func (m *Manager) process(update tgbotapi.Update) {
 				continue
 			}
 
-			c.handler(update)
+			c.handler(m, update)
 			skipCommands = true
 		case BinderInfo:
-			m.SetState(c.binder(update))
+			m.SetState(c.binder(m, update))
 		}
 	}
 	skipCommands = false
