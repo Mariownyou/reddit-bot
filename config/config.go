@@ -26,7 +26,6 @@ var (
 )
 
 func init() {
-	// get cwd for .env.local
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
