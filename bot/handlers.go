@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/mariownyou/reddit-bot/config"
 	"github.com/mariownyou/reddit-bot/upload"
 )
 
@@ -13,7 +14,7 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 
 	isSubs, newCaption, Subs := findSubredditsInMessage(caption)
 	if !isSubs {
-		Subs = Subreddits
+		Subs = config.Subreddits
 	} else {
 		caption = strings.TrimSpace(newCaption)
 	}
@@ -124,4 +125,30 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	m.Data = NewContext()
 
 	return DefaultState
+}
+
+func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
+	if auth(u) {
+		return p
+	}
+
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "You are not authorized to use this bot")
+	m.Send(msg)
+	return nil
+}
+
+func (m *Manager) Construct() {
+	// Submit post states
+	m.Handle(OnPhoto, DefaultState, PostHandler)
+	m.Handle(OnVideo, DefaultState, PostHandler)
+
+	m.Handle(OnText, AwaitFlairMessageState, AwaitFlairMessageBind)
+	m.Bind(CreateFlairMessageState, CreateFlairMessageBind)
+	m.Bind(SubmitPostState, SubmitPostBind)
+
+	// Helpers
+	m.Handle(OnText, AnyState, func(m *Manager, u tgbotapi.Update) {
+		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video with caption")
+		m.Send(msg)
+	})
 }

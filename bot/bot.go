@@ -1,8 +1,6 @@
 package bot
 
 import (
-	"os"
-	"strconv"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -14,31 +12,6 @@ const (
 	BotStateNone = iota
 	BotStateFlair
 )
-
-var (
-	// TelegramToken string
-	Users      []int64
-	Subreddits []string
-)
-
-func init() {
-	// TelegramToken = os.Getenv("TELEGRAM_TOKEN")
-
-	if subreddits := os.Getenv("SUBREDDITS"); subreddits != "" {
-		Subreddits = strings.Split(subreddits, ",")
-	} else {
-		Subreddits = []string{"test"}
-	}
-
-	if users := os.Getenv("USERS"); users != "" {
-		for _, user := range strings.Split(users, ",") {
-			usr, _ := strconv.Atoi(user)
-			Users = append(Users, int64(usr))
-		}
-	} else {
-		Users = []int64{0}
-	}
-}
 
 // type Context struct {
 // 	state      int
@@ -76,18 +49,6 @@ func NewBot(token string) (*Bot, error) {
 // 	bot.Ctx.link = link
 // 	bot.Ctx.caption = caption
 // }
-
-func (bot *Bot) auth(update tgbotapi.Update) bool {
-	id := update.Message.Chat.ID
-	// bot.Ctx.chat = update.Message.Chat.ID
-	for _, user := range Users {
-		if user == id {
-			return true
-		}
-	}
-
-	return false
-}
 
 func findSubredditsInMessage(message string) (bool, string, []string) {
 	subreddits := []string{}

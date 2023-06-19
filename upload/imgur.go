@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
+	"github.com/mariownyou/reddit-bot/config"
 )
 
 const (
@@ -74,7 +75,7 @@ func ImgurUpload(file []byte, filetype string) string {
 	// Set the content type
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	// Set the authorization header
-	req.Header.Set("Authorization", "Client-ID "+ImgurClientID)
+	req.Header.Set("Authorization", "Client-ID "+config.ImgurClientID)
 
 	// Send the request
 	client := &http.Client{}
@@ -108,7 +109,7 @@ func ImgurUpload(file []byte, filetype string) string {
 }
 
 func RedditUpload(file []byte, filetype string) string {
-	client := reddit_uploader.New(RedditUsername, RedditPassword, RedditID, RedditSecret)
+	client := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
 
 	link, err := client.UploadMedia(file, filetype)
 	if err != nil {

@@ -49,7 +49,7 @@ func (b BinderInfo) isValid(update tgbotapi.Update, state State) bool {
 }
 
 type processFunc func(tgbotapi.Update)
-type middlewareFunc func(Bot, tgbotapi.Update, processFunc) processFunc
+type middlewareFunc func(*Manager, tgbotapi.Update, processFunc) processFunc
 
 type Manager struct {
 	Bot
@@ -76,9 +76,13 @@ func (m *Manager) Run(middlewares ...middlewareFunc) {
 		if middlewares != nil {
 			process := m.process
 			for _, middleware := range middlewares {
-				process = middleware(m.Bot, update, process)
+				process = middleware(m, update, process)
 			}
-			process(update)
+			if process != nil {
+				process(update)
+			} else {
+				continue
+			}
 		} else {
 			m.process(update)
 		}

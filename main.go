@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/mariownyou/reddit-bot/bot"
+	"github.com/mariownyou/reddit-bot/config"
 )
 
 var (
@@ -60,26 +62,15 @@ func init() {
 }
 
 func main() {
-	b, err := bot.NewBot(TelegramToken)
+	fmt.Println("token", config.TelegramToken)
+	b, err := bot.NewBot(config.TelegramToken)
 	if err != nil {
 		panic(err)
 	}
 
+	b.Debug = config.Debug
+
 	manager := bot.NewManager(*b)
-
-	// Submit post states
-	manager.Handle(bot.OnPhoto, bot.DefaultState, bot.PostHandler)
-	manager.Handle(bot.OnVideo, bot.DefaultState, bot.PostHandler)
-
-	manager.Handle(bot.OnText, bot.AwaitFlairMessageState, bot.AwaitFlairMessageBind)
-	manager.Bind(bot.CreateFlairMessageState, bot.CreateFlairMessageBind)
-	manager.Bind(bot.SubmitPostState, bot.SubmitPostBind)
-
-	// Helpers
-	// MANAGER.Handle(bot.OnText, bot.AnyState, func(u tgbotapi.Update) {
-	// 	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video with caption")
-	// 	BOT.Send(msg)
-	// })
-
-	manager.Run()
+	manager.Construct()
+	manager.Run(bot.AuthMiddleware)
 }
