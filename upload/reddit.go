@@ -1,4 +1,4 @@
-package main
+package upload
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mariownyou/reddit-bot/config"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
 
@@ -30,7 +31,7 @@ type RedditClient struct {
 }
 
 func NewRedditClient() *RedditClient {
-	credentials := reddit.Credentials{ID: RedditID, Secret: RedditSecret, Username: RedditUsername, Password: RedditPassword}
+	credentials := reddit.Credentials{ID: config.RedditID, Secret: config.RedditSecret, Username: config.RedditUsername, Password: config.RedditPassword}
 	client, err := reddit.NewClient(credentials)
 	if err != nil {
 		panic(err)
@@ -102,7 +103,7 @@ func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	return flairs
 }
 
-func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption, link, sub string) {
+func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption, link string) {
 	progress := flairs
 
 	for sub, flair := range flairs {
