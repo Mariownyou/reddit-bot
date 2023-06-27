@@ -59,7 +59,6 @@ func AwaitFlairMessageBind(m *Manager, u tgbotapi.Update) {
 }
 
 func CreateFlairMessageBind(m *Manager, u tgbotapi.Update) State {
-	// caption := m.Data.Get("caption").(string)
 	subs := m.Data.Get("subs").([]string)
 	sub := subs[0]
 
