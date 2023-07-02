@@ -73,8 +73,8 @@ github.com/googleapis/gax-go/v2 v2.11.0/go.mod h1:DxmR61SGKkGLa2xigwuZIQpkCI2S5i
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/joho/godotenv v1.4.0 h1:3l4+N6zfMWnkbPEXKng2o2/MR5mSwTrBih4ZEkkz1lg=
 github.com/joho/godotenv v1.4.0/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
-github.com/mariownyou/go-drive-uploader v0.0.0-20230701222815-e6dc64e46c59 h1:qhS7/vDsfKxmzMQ3Ci+AC7U/f2ODHN0lLO0ccbVz2V8=
-github.com/mariownyou/go-drive-uploader v0.0.0-20230701222815-e6dc64e46c59/go.mod h1:DyVLwLDsfohtPzGI4YeIzg+KWA4zBCmSC0smkjUWECA=
+github.com/mariownyou/go-drive-uploader v0.0.0-20230702094420-62e7faa9fae0 h1:jljrAN9hacE9b+C5EbqLWWeKMgZa3LDms4J/D5zhv2k=
+github.com/mariownyou/go-drive-uploader v0.0.0-20230702094420-62e7faa9fae0/go.mod h1:DyVLwLDsfohtPzGI4YeIzg+KWA4zBCmSC0smkjUWECA=
 github.com/mariownyou/go-reddit-uploader v0.0.0-20230601152731-c163d9920aa2 h1:uiP6X0a6ssCb3/NUP5n58xeys9nBXS/8BZILU9/QuoA=
 github.com/mariownyou/go-reddit-uploader v0.0.0-20230601152731-c163d9920aa2/go.mod h1:w/fnlerFktnDnmZHu6ALP02dw6m7n87qT5kcSyX4N54=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

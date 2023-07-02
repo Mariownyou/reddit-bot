@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.5 // indirect
 	github.com/googleapis/gax-go/v2 v2.11.0 // indirect
-	github.com/mariownyou/go-drive-uploader v0.0.0-20230701222815-e6dc64e46c59 // indirect
+	github.com/mariownyou/go-drive-uploader v0.0.0-20230702094420-62e7faa9fae0 // indirect
 	github.com/mariownyou/go-reddit-uploader v0.0.0-20230601152731-c163d9920aa2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.10.0 // indirect

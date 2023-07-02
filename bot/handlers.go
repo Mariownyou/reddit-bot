@@ -136,7 +136,8 @@ func DriveUplaodHandler(m *Manager, u tgbotapi.Update) {
 	file := upload.DownloadFile(m.GetFileURL(u))
 	link := upload.DriveUpload(file, u.Message.Caption)
 
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, link)
+	text := fmt.Sprintf("File will be deleted in 30 minutes: %s", link)
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, text)
 	m.Send(msg)
 }
 
