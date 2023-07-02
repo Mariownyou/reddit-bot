@@ -126,6 +126,20 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	return DefaultState
 }
 
+func DriveUplaodHandler(m *Manager, u tgbotapi.Update) {
+	if u.Message.Photo == nil && u.Message.Video == nil {
+		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video")
+		m.Send(msg)
+		return
+	}
+
+	file := upload.DownloadFile(m.GetFileURL(u))
+	link := upload.DriveUpload(file, u.Message.Caption)
+
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, link)
+	m.Send(msg)
+}
+
 func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
 	if auth(u) {
 		return p
@@ -137,6 +151,8 @@ func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
 }
 
 func (m *Manager) Construct() {
+	m.Handle("/drive", DefaultState, DriveUplaodHandler)
+
 	// Submit post states
 	m.Handle(OnPhoto, DefaultState, PostHandler)
 	m.Handle(OnVideo, DefaultState, PostHandler)

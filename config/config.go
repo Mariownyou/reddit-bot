@@ -19,6 +19,8 @@ var (
 
 	ImgurClientID string
 
+	DriveCredentials []byte
+
 	TelegramToken string
 	Debug         bool
 	Subreddits    = []string{"test"}
@@ -62,4 +64,6 @@ func init() {
 	if subreddits := os.Getenv("SUBREDDITS"); subreddits != "" {
 		Subreddits = strings.Split(subreddits, ",")
 	}
+
+	DriveCredentials = []byte(os.Getenv("DRIVE_CREDENTIALS"))
 }

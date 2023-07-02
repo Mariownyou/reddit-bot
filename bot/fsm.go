@@ -18,11 +18,21 @@ type HandlerInfo struct {
 	handler Handler
 }
 
+func or(strings ...string) string {
+	for _, s := range strings {
+		if s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
 func (h HandlerInfo) isValid(update tgbotapi.Update, state State) bool {
 	switch filter := h.filter.(type) {
 	case string:
+		msg := or(update.Message.Text, update.Message.Caption)
 		return (h.state == state || h.state == AnyState) &&
-			(strings.HasPrefix(update.Message.Text, (h.filter).(string)) || h.filter == "*")
+			(strings.HasPrefix(msg, (h.filter).(string)) || h.filter == "*")
 	case ContentType:
 		switch filter {
 		case OnText:
