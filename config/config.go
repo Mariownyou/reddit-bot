@@ -11,6 +11,10 @@ import (
 
 const EnvFile = ".env.local"
 
+const (
+	DriveDeleteAfter = 180
+)
+
 var (
 	RedditID       string
 	RedditSecret   string

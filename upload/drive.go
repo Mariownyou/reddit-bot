@@ -16,7 +16,7 @@ func DriveUpload(file []byte, filename string) string {
 		return ""
 	}
 
-	DriveDelete(fileID, 30)
+	DriveDelete(fileID, config.DriveDeleteAfter)
 
 	return link
 }
