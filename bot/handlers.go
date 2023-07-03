@@ -141,6 +141,27 @@ func DriveUplaodHandler(m *Manager, u tgbotapi.Update) {
 	m.Send(msg)
 }
 
+func ImgurUploadHandler(m *Manager, u tgbotapi.Update) {
+	if u.Message.Photo == nil && u.Message.Video == nil {
+		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video")
+		m.Send(msg)
+		return
+	}
+
+	file := upload.DownloadFile(m.GetFileURL(u))
+	var link string
+
+	switch {
+	case u.Message.Photo != nil:
+		link = upload.ImgurUpload(file, "image")
+	case u.Message.Video != nil:
+		link = upload.ImgurUpload(file, "video")
+	}
+
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, link)
+	m.Send(msg)
+}
+
 func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
 	if auth(u) {
 		return p
@@ -152,6 +173,7 @@ func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
 }
 
 func (m *Manager) Construct() {
+	m.Handle("/imgur", DefaultState, ImgurUploadHandler)
 	m.Handle("/drive", DefaultState, DriveUplaodHandler)
 
 	// Submit post states
