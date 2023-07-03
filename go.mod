@@ -15,7 +15,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.11.0 // indirect
 	github.com/mariownyou/go-drive-uploader v0.0.0-20230702094420-62e7faa9fae0 // indirect
 	github.com/mariownyou/go-reddit-uploader v0.0.0-20230601152731-c163d9920aa2 // indirect
-	github.com/mariownyou/go-twitter-uploader v0.0.0-20230703195248-cb55c3cc8da3 // indirect
+	github.com/mariownyou/go-twitter-uploader v0.0.0-20230703201327-f14b15606380 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.10.0 // indirect
 	golang.org/x/sys v0.9.0 // indirect
