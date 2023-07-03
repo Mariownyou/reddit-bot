@@ -18,6 +18,8 @@ github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWH
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/dghubble/oauth1 v0.7.2 h1:pwcinOZy8z6XkNxvPmUDY52M7RDPxt0Xw1zgZ6Cl5JA=
+github.com/dghubble/oauth1 v0.7.2/go.mod h1:9erQdIhqhOHG/7K9s/tgh9Ks/AfoyrO5mW/43Lu2+kE=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
@@ -77,6 +79,8 @@ github.com/mariownyou/go-drive-uploader v0.0.0-20230702094420-62e7faa9fae0 h1:jl
 github.com/mariownyou/go-drive-uploader v0.0.0-20230702094420-62e7faa9fae0/go.mod h1:DyVLwLDsfohtPzGI4YeIzg+KWA4zBCmSC0smkjUWECA=
 github.com/mariownyou/go-reddit-uploader v0.0.0-20230601152731-c163d9920aa2 h1:uiP6X0a6ssCb3/NUP5n58xeys9nBXS/8BZILU9/QuoA=
 github.com/mariownyou/go-reddit-uploader v0.0.0-20230601152731-c163d9920aa2/go.mod h1:w/fnlerFktnDnmZHu6ALP02dw6m7n87qT5kcSyX4N54=
+github.com/mariownyou/go-twitter-uploader v0.0.0-20230703195248-cb55c3cc8da3 h1:otliUnhN/Cw7bXb20u22rBEtzagc/UZq5iDzxhXWtSc=
+github.com/mariownyou/go-twitter-uploader v0.0.0-20230703195248-cb55c3cc8da3/go.mod h1:OvND5fyZK58uaVfz/sh8AEUs/DDgv1BZdrbMqWDLfkE=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=

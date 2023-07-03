@@ -7,6 +7,7 @@ require github.com/vartanbeno/go-reddit/v2 v2.0.1
 require (
 	cloud.google.com/go/compute v1.20.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	github.com/dghubble/oauth1 v0.7.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
 	github.com/google/uuid v1.3.0 // indirect
@@ -14,6 +15,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.11.0 // indirect
 	github.com/mariownyou/go-drive-uploader v0.0.0-20230702094420-62e7faa9fae0 // indirect
 	github.com/mariownyou/go-reddit-uploader v0.0.0-20230601152731-c163d9920aa2 // indirect
+	github.com/mariownyou/go-twitter-uploader v0.0.0-20230703195248-cb55c3cc8da3 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.10.0 // indirect
 	golang.org/x/sys v0.9.0 // indirect

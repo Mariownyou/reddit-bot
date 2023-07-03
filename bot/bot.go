@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/mariownyou/go-twitter-uploader/twitter_uploader"
+	"github.com/mariownyou/reddit-bot/config"
 	"github.com/mariownyou/reddit-bot/upload"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
@@ -26,7 +28,8 @@ const (
 type Bot struct {
 	tgbotapi.BotAPI
 	// Ctx    Context
-	Client *upload.RedditClient
+	Client        *upload.RedditClient
+	TwitterClient *twitter_uploader.Uploader
 }
 
 func NewBot(token string) (*Bot, error) {
@@ -37,8 +40,14 @@ func NewBot(token string) (*Bot, error) {
 
 	// ctx := Context{state: BotStateNone, flairs: map[string]string{}}
 	reddit := upload.NewRedditClient()
+	twitter := twitter_uploader.New(
+		config.TwitterConsumerKey,
+		config.TwitterConsumerSecret,
+		config.TwitterAccessToken,
+		config.TwitterAccessTokenSecret,
+	)
 
-	return &Bot{*bot, reddit}, nil
+	return &Bot{*bot, reddit, twitter}, nil
 }
 
 // func (bot *Bot) ChangeContext(state int, subs []string, flairs map[string]string, sub, link, caption string) {

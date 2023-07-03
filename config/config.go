@@ -25,6 +25,11 @@ var (
 
 	DriveCredentials []byte
 
+	TwitterConsumerKey       string
+	TwitterConsumerSecret    string
+	TwitterAccessToken       string
+	TwitterAccessTokenSecret string
+
 	TelegramToken string
 	Debug         bool
 	Subreddits    = []string{"test"}
@@ -70,4 +75,9 @@ func init() {
 	}
 
 	DriveCredentials = []byte(os.Getenv("DRIVE_CREDENTIALS"))
+
+	TwitterConsumerKey = os.Getenv("TWITTER_CONSUMER_KEY")
+	TwitterConsumerSecret = os.Getenv("TWITTER_CONSUMER_SECRET")
+	TwitterAccessToken = os.Getenv("TWITTER_ACCESS_TOKEN")
+	TwitterAccessTokenSecret = os.Getenv("TWITTER_ACCESS_SECRET")
 }

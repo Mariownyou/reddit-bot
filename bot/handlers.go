@@ -22,13 +22,18 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 	fileURL := m.GetFileURL(u)
 	file := upload.DownloadFile(fileURL)
 	var link string
+	var filetype string
 
 	switch {
 	case u.Message.Photo != nil:
 		link = upload.RedditUpload(file, "jpg")
+		filetype = "photo.jpg"
 	case u.Message.Video != nil:
 		link = upload.ImgurUpload(file, "video")
+		filetype = "video.mp4"
 	}
+
+	m.TwitterClient.Upload(caption, file, filetype)
 
 	m.Data.Set("link", link)
 	m.Data.Set("caption", caption)
