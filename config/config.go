@@ -79,5 +79,5 @@ func init() {
 	TwitterConsumerKey = os.Getenv("TWITTER_CONSUMER_KEY")
 	TwitterConsumerSecret = os.Getenv("TWITTER_CONSUMER_SECRET")
 	TwitterAccessToken = os.Getenv("TWITTER_ACCESS_TOKEN")
-	TwitterAccessTokenSecret = os.Getenv("TWITTER_ACCESS_SECRET")
+	TwitterAccessTokenSecret = os.Getenv("TWITTER_ACCESS_TOKEN_SECRET")
 }
