@@ -79,8 +79,8 @@ github.com/mariownyou/go-drive-uploader v0.0.0-20230702094420-62e7faa9fae0 h1:jl
 github.com/mariownyou/go-drive-uploader v0.0.0-20230702094420-62e7faa9fae0/go.mod h1:DyVLwLDsfohtPzGI4YeIzg+KWA4zBCmSC0smkjUWECA=
 github.com/mariownyou/go-reddit-uploader v0.0.0-20230601152731-c163d9920aa2 h1:uiP6X0a6ssCb3/NUP5n58xeys9nBXS/8BZILU9/QuoA=
 github.com/mariownyou/go-reddit-uploader v0.0.0-20230601152731-c163d9920aa2/go.mod h1:w/fnlerFktnDnmZHu6ALP02dw6m7n87qT5kcSyX4N54=
-github.com/mariownyou/go-twitter-uploader v0.0.0-20230703225044-5499dd1d94a1 h1:tD2SoGWgIwwTmDl8QwMI6vEZcPmQY4z69VHbQB4+S7A=
-github.com/mariownyou/go-twitter-uploader v0.0.0-20230703225044-5499dd1d94a1/go.mod h1:OvND5fyZK58uaVfz/sh8AEUs/DDgv1BZdrbMqWDLfkE=
+github.com/mariownyou/go-twitter-uploader v0.0.0-20230704082844-7af6bbf8ec09 h1:NM1C5EKgxXu8hXx+P9H//ywA40CSJcCOn10YNSdRX6s=
+github.com/mariownyou/go-twitter-uploader v0.0.0-20230704082844-7af6bbf8ec09/go.mod h1:OvND5fyZK58uaVfz/sh8AEUs/DDgv1BZdrbMqWDLfkE=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
