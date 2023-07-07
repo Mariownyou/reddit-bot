@@ -22,37 +22,17 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 	fileURL := m.GetFileURL(u)
 	file := upload.DownloadFile(fileURL)
 
-	var link string
 	var filetype string
 
 	switch {
 	case u.Message.Photo != nil:
-		link = upload.RedditUpload(file, "image.jpg")
 		filetype = "photo.jpg"
 	case u.Message.Video != nil:
-		previewLink, err := upload.GetRedditPreviewLink(file)
-
-		if err != nil {
-			link = upload.ImgurUpload(file, "video")
-		} else {
-			link = upload.RedditUpload(file, "video.mp4")
-			m.Data.previewLink = previewLink
-		}
-
 		filetype = "video.mp4"
 	}
 
 	m.Data.file = file
-	m.Data.filetye
-
-	go func() {
-		if config.Debug {
-			return
-		}
-		m.TwitterClient.Upload(caption, file, filetype)
-	}()
-
-	m.Data.link = link
+	m.Data.filetype = filetype
 	m.Data.caption = caption
 	m.Data.subs = Subs
 
@@ -120,28 +100,34 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	out := make(chan string)
 	flairs := m.Data.flairs
 	caption := m.Data.caption
-	link := m.Data.link
 
 	for sub, flair := range m.Data.flairs {
 		text += fmt.Sprintf("%s - %s awaiting...\n", sub, flair)
 	}
 
 	text += fmt.Sprintf("Title: %s\n", caption)
-	text += fmt.Sprintf("Content Link: %s\n", link)
+	// text += fmt.Sprintf("Content Link: %s\n", link)
 
 	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Posting content to the following subreddits with flairs:\n"+text)
 	msgObj, _ := m.Send(msg)
 	mID := msgObj.MessageID
 
-	go m.Client.SubmitPosts(out, flairs, caption, link)
+	go m.Client.SubmitPosts(out, flairs, caption, m.Data.file, m.Data.filetype)
 
 	for text := range out {
 		text += fmt.Sprintf("Title: %s\n", caption)
-		text += fmt.Sprintf("Content Link: %s\n", link)
+		// text += fmt.Sprintf("Content Link: %s\n", link)
 		editMsg := tgbotapi.NewEditMessageText(u.Message.Chat.ID, mID, text)
 
 		m.Send(editMsg)
 	}
+
+	go func() {
+		if config.Debug {
+			return
+		}
+		m.TwitterClient.Upload(caption, m.Data.file, m.Data.filetype)
+	}()
 
 	m.Data = NewContext()
 

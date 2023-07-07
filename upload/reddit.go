@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
 	"github.com/mariownyou/reddit-bot/config"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
@@ -87,8 +88,30 @@ func (c *RedditClient) submitLink(submitLinkRequest reddit.SubmitLinkRequest, ou
 	}
 }
 
-func (c *RedditClient) SubmitLink(out chan string, title, url, subreddit, flair string) {
-	submitLinkRequest := c.NewSubmitLinkRequest(title, url, subreddit, flair)
+func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, file []byte, filetype string) {
+	var filename string
+	var url string
+
+	if filetype == "video.mp4" {
+		filename = "video.mp4"
+		preview, err := GetRedditPreviewLink(file)
+		if err != nil {
+			out <- fmt.Sprintf("Error getting reddit preview link: %s\n", err)
+		}
+		client, _ := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
+		videoLink := RedditUpload(file, filename)
+		_, err = client.SubmitVideoLink(p, videoLink, preview, filename)
+		if err != nil {
+			out <- fmt.Sprintf("Error submitting video: %s\n", err)
+		} else {
+			url = ImgurUpload(file, filename)
+		}
+	} else {
+		url = RedditUpload(file, filename)
+		filename = "image.jpg"
+	}
+
+	submitLinkRequest := c.NewSubmitLinkRequest(p.Title, url, p.Subreddit, p.FlairID)
 	c.submitLink(submitLinkRequest, out, 0)
 	close(out)
 }
@@ -103,7 +126,7 @@ func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	return flairs
 }
 
-func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption, link string) {
+func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption string, file []byte, filetype string) {
 	progress := flairs
 
 	for sub, flair := range flairs {
@@ -112,7 +135,8 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 		}
 
 		submitChan := make(chan string)
-		go c.SubmitLink(submitChan, caption, link, sub, flair)
+		params := reddit_uploader.Submission{Title: caption, Subreddit: sub, FlairID: flair}
+		go c.Submit(submitChan, params, file, filetype)
 
 		for msg := range submitChan {
 			progress[sub] = msg

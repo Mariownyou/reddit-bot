@@ -113,7 +113,10 @@ func ImgurUpload(file []byte, filetype string) string {
 }
 
 func RedditUpload(file []byte, filename string) string {
-	client := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
+	client, err := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
+	if err != nil {
+		panic(err)
+	}
 
 	link, err := client.UploadMedia(file, filename)
 	if err != nil {
@@ -124,13 +127,16 @@ func RedditUpload(file []byte, filename string) string {
 }
 
 func GetRedditPreviewLink(video []byte) (string, error) {
-	client := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
+	client, err := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
+	if err != nil {
+		return "", err
+	}
 
 	name := getRandomName()
 	vName := name + ".mp4"
 	pName := name + ".jpg"
 
-	err := os.WriteFile(vName, video, 0644)
+	err = os.WriteFile(vName, video, 0644)
 	if err != nil {
 		return "", err
 	}
