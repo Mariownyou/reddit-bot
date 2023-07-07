@@ -63,7 +63,7 @@ func (c *RedditClient) NewSubmitLinkRequest(title, url, subreddit, flair string)
 	}
 }
 
-func (c *RedditClient) submitLink(submitLinkRequest reddit.SubmitLinkRequest, out chan string, retry int) {
+func (c *RedditClient) submitLink(submitLinkRequest reddit.SubmitLinkRequest, out chan string, retry int) error {
 	post, _, err := c.Client.Post.SubmitLink(c.Ctx, submitLinkRequest)
 	// err = errors.New("RATELIMIT: you are doing that too much. try again in 2 min min min minutes.")
 
@@ -82,11 +82,12 @@ func (c *RedditClient) submitLink(submitLinkRequest reddit.SubmitLinkRequest, ou
 		} else {
 			fmt.Printf("Error submitting post: %s\n", err)
 			out <- fmt.Sprintf("Error submitting post: %s\n", err)
-			return
+			return err
 		}
 	} else {
 		out <- fmt.Sprintf("The post is available at: %s\n", post.URL)
 	}
+	return nil
 }
 
 func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, file []byte, filetype string) {
@@ -113,7 +114,12 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	}
 
 	submitLinkRequest := c.NewSubmitLinkRequest(p.Title, url, p.Subreddit, p.FlairID)
-	c.submitLink(submitLinkRequest, out, 0)
+	err := c.submitLink(submitLinkRequest, out, 0)
+	if err != nil {
+		url = ImgurUpload(file, filename)
+		submitLinkRequest = c.NewSubmitLinkRequest(p.Title, url, p.Subreddit, p.FlairID)
+		c.submitLink(submitLinkRequest, out, 0)
+	}
 	close(out)
 }
 
