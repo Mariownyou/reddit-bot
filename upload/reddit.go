@@ -80,6 +80,7 @@ func (c *RedditClient) submitLink(submitLinkRequest reddit.SubmitLinkRequest, ou
 
 			c.submitLink(submitLinkRequest, out, retry+1)
 		} else {
+			fmt.Printf("Error submitting post: %s\n", err)
 			out <- fmt.Sprintf("Error submitting post: %s\n", err)
 			return
 		}
@@ -104,7 +105,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 		if err != nil {
 			out <- fmt.Sprintf("Error submitting video: %s\n", err)
 		} else {
-			url = ImgurUpload(file, filename)
+			url = ImgurUpload(file, "video")
 		}
 	} else {
 		url = RedditUpload(file, filename)
