@@ -2,11 +2,15 @@ package upload
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
+	"os/exec"
 
 	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
 	"github.com/mariownyou/reddit-bot/config"
@@ -108,13 +112,57 @@ func ImgurUpload(file []byte, filetype string) string {
 	return link
 }
 
-func RedditUpload(file []byte, filetype string) string {
+func RedditUpload(file []byte, filename string) string {
 	client := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
 
-	link, err := client.UploadMedia(file, filetype)
+	link, err := client.UploadMedia(file, filename)
 	if err != nil {
 		panic(err)
 	}
 
 	return link
+}
+
+func GetRedditPreviewLink(video []byte) (string, error) {
+	client := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
+
+	name := getRandomName()
+	vName := name + ".mp4"
+	pName := name + ".jpg"
+
+	err := os.WriteFile(vName, video, 0644)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command("ffmpeg", "-i", vName, "-vframes", "1", pName)
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	preview, err := os.ReadFile(pName)
+	if err != nil {
+		return "", err
+	}
+
+	link, err := client.UploadMedia(preview, "preview.jpg")
+	if err != nil {
+		panic(err)
+	}
+
+	os.Remove(vName)
+	os.Remove(pName)
+
+	return link, nil
+}
+
+func getRandomName() string {
+	randomBytes := make([]byte, 16)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	return base64.URLEncoding.EncodeToString(randomBytes)
 }

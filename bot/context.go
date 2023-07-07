@@ -1,20 +1,18 @@
 package bot
 
-type Context map[string]interface{}
+type Context struct {
+	flairs      map[string]string
+	subs        []string
+	caption     string
+	link        string
+	previewLink string
+	file        []byte
+	preview     []byte
+}
 
 func NewContext() Context {
 	return Context{
-		"flairs":  map[string]string{},
-		"subs":    []string{},
-		"caption": "",
-		"link":    "",
+		flairs: map[string]string{},
+		subs:   []string{},
 	}
-}
-
-func (c Context) Set(key string, value interface{}) {
-	c[key] = value
-}
-
-func (c Context) Get(key string) interface{} {
-	return c[key]
 }

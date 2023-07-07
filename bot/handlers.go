@@ -21,36 +21,53 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 
 	fileURL := m.GetFileURL(u)
 	file := upload.DownloadFile(fileURL)
+
 	var link string
 	var filetype string
 
 	switch {
 	case u.Message.Photo != nil:
-		link = upload.RedditUpload(file, "jpg")
+		link = upload.RedditUpload(file, "image.jpg")
 		filetype = "photo.jpg"
 	case u.Message.Video != nil:
-		link = upload.ImgurUpload(file, "video")
+		previewLink, err := upload.GetRedditPreviewLink(file)
+
+		if err != nil {
+			link = upload.ImgurUpload(file, "video")
+		} else {
+			link = upload.RedditUpload(file, "video.mp4")
+			m.Data.previewLink = previewLink
+		}
+
 		filetype = "video.mp4"
 	}
 
-	m.TwitterClient.Upload(caption, file, filetype)
+	m.Data.file = file
+	m.Data.filetye
 
-	m.Data.Set("link", link)
-	m.Data.Set("caption", caption)
-	m.Data.Set("subs", Subs)
+	go func() {
+		if config.Debug {
+			return
+		}
+		m.TwitterClient.Upload(caption, file, filetype)
+	}()
+
+	m.Data.link = link
+	m.Data.caption = caption
+	m.Data.subs = Subs
 
 	m.SetState(CreateFlairMessageState)
 }
 
 func AwaitFlairMessageBind(m *Manager, u tgbotapi.Update) {
 	flair := u.Message.Text
-	flairMap := m.Data.Get("flairs").(map[string]string)
-	subs := m.Data.Get("subs").([]string)
+	flairMap := m.Data.flairs
+	subs := m.Data.subs
 	sub := subs[0]
 
-	m.Data.Set("subs", subs[1:])
+	m.Data.subs = subs[1:]
 	flairMap[sub] = flair
-	m.Data.Set("flairs", flairMap)
+	m.Data.flairs = flairMap
 
 	if len(subs[1:]) == 0 {
 		m.SetState(SubmitPostState)
@@ -64,20 +81,20 @@ func AwaitFlairMessageBind(m *Manager, u tgbotapi.Update) {
 }
 
 func CreateFlairMessageBind(m *Manager, u tgbotapi.Update) State {
-	subs := m.Data.Get("subs").([]string)
+	subs := m.Data.subs
 	sub := subs[0]
 
 	flairs := m.Client.GetPostFlairs(sub)
 
 	if len(flairs) <= 1 {
-		m.Data.Set("subs", subs[1:])
-		flairsMap := m.Data.Get("flairs").(map[string]string)
+		m.Data.subs = subs[1:]
+		flairsMap := m.Data.flairs
 
 		flairsMap[sub] = "None"
-		m.Data.Set("flairs", flairsMap)
+		m.Data.flairs = flairsMap
 
-		if len(m.Data.Get("subs").([]string)) == 0 {
-			fmt.Println("map", m.Data.Get("flairs").(map[string]string))
+		if len(m.Data.subs) == 0 {
+			fmt.Println("map", m.Data.flairs)
 			text := fmt.Sprintf("No flairs found for sub %s, posting without flair", sub)
 
 			msg := tgbotapi.NewMessage(u.Message.Chat.ID, text)
@@ -101,11 +118,11 @@ func CreateFlairMessageBind(m *Manager, u tgbotapi.Update) State {
 func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	var text string
 	out := make(chan string)
-	flairs := m.Data.Get("flairs").(map[string]string)
-	caption := m.Data.Get("caption").(string)
-	link := m.Data.Get("link").(string)
+	flairs := m.Data.flairs
+	caption := m.Data.caption
+	link := m.Data.link
 
-	for sub, flair := range m.Data.Get("flairs").(map[string]string) {
+	for sub, flair := range m.Data.flairs {
 		text += fmt.Sprintf("%s - %s awaiting...\n", sub, flair)
 	}
 
