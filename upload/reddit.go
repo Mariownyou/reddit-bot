@@ -127,14 +127,14 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	r, err := redditRes()
 	if err != nil {
 		out <- fmt.Sprintf("Error submitting post using reddit native api❌: %s", err)
-		fmt.Println("Error submitting post using reddit native api", p.Subreddit, r)
+		fmt.Println("Error submitting post using reddit native api", p.Subreddit, r, err)
 
 		time.Sleep(time.Second * 1)
 
 		r, err = imgurRes()
 		if err != nil {
 			out <- fmt.Sprintf("Error submitting post using imgur api❌: %s", err)
-			fmt.Println("Error submitting post using imgur api", p.Subreddit, r)
+			fmt.Println("Error submitting post using imgur api", p.Subreddit, r, err)
 		} else {
 			out <- "Post submitted successfully using imgur ✅"
 			fmt.Println("Post submitted successfully using imgur api", p.Subreddit)

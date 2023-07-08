@@ -128,7 +128,9 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	// 	}
 	// 	m.TwitterClient.Upload(caption, m.Data.file, m.Data.filetype)
 	// }()
+
 	if !config.Debug {
+		fmt.Println("Posting to twitter")
 		m.TwitterClient.Upload(caption, m.Data.file, m.Data.filetype)
 	}
 
