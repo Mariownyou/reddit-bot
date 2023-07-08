@@ -122,12 +122,15 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 		m.Send(editMsg)
 	}
 
-	go func() {
-		if config.Debug {
-			return
-		}
+	// go func() {
+	// 	if config.Debug {
+	// 		return
+	// 	}
+	// 	m.TwitterClient.Upload(caption, m.Data.file, m.Data.filetype)
+	// }()
+	if !config.Debug {
 		m.TwitterClient.Upload(caption, m.Data.file, m.Data.filetype)
-	}()
+	}
 
 	m.Data = NewContext()
 

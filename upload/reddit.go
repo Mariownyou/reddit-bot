@@ -98,38 +98,40 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, red
 		return
 	}
 
-	if redditPreviewLink == "" {
-		r, err := client.SubmitImageLink(p, redditLink, "image.jpg")
-		fmt.Println("Response", r)
-		if err != nil {
-			out <- fmt.Sprintf("Error submitting image link using reddit native api❌: %s", err)
-			_, err := client.SubmitImageLink(p, imgurLink, "image.jpg")
-			if err != nil {
-				out <- fmt.Sprintf("Error submitting image link using imgur api❌: %s", err)
-			} else {
-				fmt.Println("Image submitted successfully using imgur api", p.Subreddit)
-				out <- "Post submitted successfully using imgur ✅"
-			}
+	redditRes := func() (string, error) {
+		if redditPreviewLink == "" {
+			return client.SubmitImageLink(p, redditLink, "image.jpg")
 		} else {
-			fmt.Println("Image submitted successfully using reddit native api", p.Subreddit)
-			out <- "Post submitted successfully ✅"
+			return client.SubmitVideoLink(p, redditLink, redditPreviewLink, "video.mp4")
+		}
+	}
+
+	imgurRes := func() (string, error) {
+		if redditPreviewLink == "" {
+			return client.SubmitImageLink(p, imgurLink, "image.jpg")
+		} else {
+			return client.SubmitImageLink(p, imgurLink, "video.mp4")
+		}
+	}
+
+	r, err := redditRes()
+	if err != nil {
+		out <- fmt.Sprintf("Error submitting post using reddit native api❌: %s", err)
+		fmt.Println("Error submitting post using reddit native api", p.Subreddit, r)
+
+		time.Sleep(time.Second * 1)
+
+		r, err = imgurRes()
+		if err != nil {
+			out <- fmt.Sprintf("Error submitting post using imgur api❌: %s", err)
+			fmt.Println("Error submitting post using imgur api", p.Subreddit, r)
+		} else {
+			out <- "Post submitted successfully using imgur ✅"
+			fmt.Println("Post submitted successfully using imgur api", p.Subreddit)
 		}
 	} else {
-		r, err := client.SubmitVideoLink(p, redditLink, redditPreviewLink, "video.mp4")
-		fmt.Println("Response", r)
-		if err != nil {
-			out <- fmt.Sprintf("Error submitting video link using reddit native api❌: %s", err)
-			_, err := client.SubmitImageLink(p, imgurLink, "image.jpg")
-			if err != nil {
-				out <- fmt.Sprintf("Error submitting image link using imgur api❌: %s", err)
-			} else {
-				fmt.Println("Video submitted successfully using imgur api", p.Subreddit)
-				out <- "Post submitted successfully using imgur ✅"
-			}
-		} else {
-			fmt.Println("Video submitted successfully using reddit native api", p.Subreddit)
-			out <- "Post submitted successfully ✅"
-		}
+		out <- "Post submitted successfully ✅"
+		fmt.Println("Post submitted successfully using reddit native api", p.Subreddit)
 	}
 
 	close(out)
