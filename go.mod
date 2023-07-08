@@ -37,4 +37,4 @@ require (
 )
 
 // replace github.com/vartanbeno/go-reddit/v2 => ../go-reddit
-replace github.com/mariownyou/go-reddit-uploader => ../go-reddit-submit-image
+// replace github.com/mariownyou/go-reddit-uploader => ../go-reddit-submit-image
