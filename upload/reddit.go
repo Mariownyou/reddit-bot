@@ -90,7 +90,17 @@ func (c *RedditClient) submitLink(submitLinkRequest reddit.SubmitLinkRequest, ou
 	return nil
 }
 
-func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, redditLink, redditPreviewLink, imgurLink string) {
+func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, file []byte, filetype, imgurLink string) {
+	var redditPreviewLink, redditLink string
+
+	if filetype == "image.jpg" {
+		redditPreviewLink = ""
+		redditLink = RedditUpload(file, "image")
+	} else {
+		redditPreviewLink, _ = GetRedditPreviewLink(file)
+		redditLink = RedditUpload(file, "video")
+	}
+
 	client, err := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
 	if err != nil {
 		fmt.Printf("Error creating reddit uploader client: %s\n", err)
@@ -150,19 +160,11 @@ func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption string, file []byte, filetype string) {
 	progress := flairs
 
-	var (
-		redditPreviewLink string
-		redditLink        string
-		imgurLink         string
-	)
+	var imgurLink string
 
 	if filetype == "image.jpg" {
-		redditPreviewLink = ""
-		redditLink = RedditUpload(file, "image")
 		imgurLink = ImgurUpload(file, "image")
 	} else {
-		redditPreviewLink, _ = GetRedditPreviewLink(file)
-		redditLink = RedditUpload(file, "video")
 		imgurLink = ImgurUpload(file, "video")
 	}
 
@@ -173,7 +175,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 
 		submitChan := make(chan string)
 		params := reddit_uploader.Submission{Title: caption, Subreddit: sub, FlairID: flair}
-		go c.Submit(submitChan, params, redditLink, redditPreviewLink, imgurLink)
+		go c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {
 			progress[sub] = msg

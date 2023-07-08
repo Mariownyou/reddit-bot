@@ -173,6 +173,25 @@ func ImgurUploadHandler(m *Manager, u tgbotapi.Update) {
 	m.Send(msg)
 }
 
+func FlairsHandler(m *Manager, u tgbotapi.Update) {
+	words := strings.Split(u.Message.Text, " ")
+	if len(words) < 2 {
+		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please provide a subreddit")
+		m.Send(msg)
+		return
+	}
+
+	flairs := m.Client.GetPostFlairs(words[1])
+
+	var text string
+	for _, flair := range flairs[:10] {
+		text += fmt.Sprintf("%s -- %s\n", flair.Text, flair.ID)
+	}
+
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, text)
+	m.Send(msg)
+}
+
 func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
 	if auth(u) {
 		return p
@@ -184,6 +203,7 @@ func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
 }
 
 func (m *Manager) Construct() {
+	m.Handle("/flairs", DefaultState, FlairsHandler)
 	m.Handle("/imgur", DefaultState, ImgurUploadHandler)
 	m.Handle("/drive", DefaultState, DriveUplaodHandler)
 
