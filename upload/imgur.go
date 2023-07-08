@@ -112,13 +112,20 @@ func ImgurUpload(file []byte, filetype string) string {
 	return link
 }
 
-func RedditUpload(file []byte, filename string) string {
+func RedditUpload(file []byte, filetype string) string {
+	var f string
+	if filetype == "image" {
+		f = "image.jpg"
+	} else {
+		f = "video.mp4"
+	}
+
 	client, err := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
 	if err != nil {
 		panic(err)
 	}
 
-	link, err := client.UploadMedia(file, filename)
+	link, err := client.UploadMedia(file, f)
 	if err != nil {
 		panic(err)
 	}

@@ -90,36 +90,48 @@ func (c *RedditClient) submitLink(submitLinkRequest reddit.SubmitLinkRequest, ou
 	return nil
 }
 
-func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, file []byte, filetype string) {
-	var filename string
-	var url string
+func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, redditLink, redditPreviewLink, imgurLink string) {
+	client, err := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
+	if err != nil {
+		fmt.Printf("Error creating reddit uploader client: %s\n", err)
+		close(out)
+		return
+	}
 
-	if filetype == "video.mp4" {
-		filename = "video.mp4"
-		preview, err := GetRedditPreviewLink(file)
+	if redditPreviewLink == "" {
+		r, err := client.SubmitImageLink(p, redditLink, "image.jpg")
+		fmt.Println("Response", r)
 		if err != nil {
-			out <- fmt.Sprintf("Error getting reddit preview link: %s\n", err)
-		}
-		client, _ := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
-		videoLink := RedditUpload(file, filename)
-		_, err = client.SubmitVideoLink(p, videoLink, preview, filename)
-		if err != nil {
-			out <- fmt.Sprintf("Error submitting video: %s\n", err)
+			out <- fmt.Sprintf("Error submitting image link using reddit native api❌: %s", err)
+			_, err := client.SubmitImageLink(p, imgurLink, "image.jpg")
+			if err != nil {
+				out <- fmt.Sprintf("Error submitting image link using imgur api❌: %s", err)
+			} else {
+				fmt.Println("Image submitted successfully using imgur api", p.Subreddit)
+				out <- "Post submitted successfully using imgur ✅"
+			}
 		} else {
-			url = ImgurUpload(file, "video")
+			fmt.Println("Image submitted successfully using reddit native api", p.Subreddit)
+			out <- "Post submitted successfully ✅"
 		}
 	} else {
-		url = RedditUpload(file, filename)
-		filename = "image.jpg"
+		r, err := client.SubmitVideoLink(p, redditLink, redditPreviewLink, "video.mp4")
+		fmt.Println("Response", r)
+		if err != nil {
+			out <- fmt.Sprintf("Error submitting video link using reddit native api❌: %s", err)
+			_, err := client.SubmitImageLink(p, imgurLink, "image.jpg")
+			if err != nil {
+				out <- fmt.Sprintf("Error submitting image link using imgur api❌: %s", err)
+			} else {
+				fmt.Println("Video submitted successfully using imgur api", p.Subreddit)
+				out <- "Post submitted successfully using imgur ✅"
+			}
+		} else {
+			fmt.Println("Video submitted successfully using reddit native api", p.Subreddit)
+			out <- "Post submitted successfully ✅"
+		}
 	}
 
-	submitLinkRequest := c.NewSubmitLinkRequest(p.Title, url, p.Subreddit, p.FlairID)
-	err := c.submitLink(submitLinkRequest, out, 0)
-	if err != nil {
-		url = ImgurUpload(file, filename)
-		submitLinkRequest = c.NewSubmitLinkRequest(p.Title, url, p.Subreddit, p.FlairID)
-		c.submitLink(submitLinkRequest, out, 0)
-	}
 	close(out)
 }
 
@@ -136,6 +148,22 @@ func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption string, file []byte, filetype string) {
 	progress := flairs
 
+	var (
+		redditPreviewLink string
+		redditLink        string
+		imgurLink         string
+	)
+
+	if filetype == "image.jpg" {
+		redditPreviewLink = ""
+		redditLink = RedditUpload(file, "image")
+		imgurLink = ImgurUpload(file, "image")
+	} else {
+		redditPreviewLink, _ = GetRedditPreviewLink(file)
+		redditLink = RedditUpload(file, "video")
+		imgurLink = ImgurUpload(file, "video")
+	}
+
 	for sub, flair := range flairs {
 		if flair == "None" {
 			flair = ""
@@ -143,7 +171,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 
 		submitChan := make(chan string)
 		params := reddit_uploader.Submission{Title: caption, Subreddit: sub, FlairID: flair}
-		go c.Submit(submitChan, params, file, filetype)
+		go c.Submit(submitChan, params, redditLink, redditPreviewLink, imgurLink)
 
 		for msg := range submitChan {
 			progress[sub] = msg
