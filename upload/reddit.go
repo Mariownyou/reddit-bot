@@ -2,17 +2,17 @@ package upload
 
 import (
 	"context"
-	"errors"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
+	"os"
+	"os/exec"
 	"time"
 
 	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
 	"github.com/mariownyou/reddit-bot/config"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
-
-var FlairRequiredText = `POST https://oauth.reddit.com/api/submit: 200 field "flair" caused SUBMIT_VALIDATION_FLAIR_REQUIRED: Your post must contain post flair.`
-var ErrFlairRequired = errors.New("flair is required")
 
 type Progress map[string]string
 
@@ -25,8 +25,9 @@ func (p Progress) String() string {
 }
 
 type RedditClient struct {
-	Client *reddit.Client
-	Ctx    context.Context
+	Client   *reddit.Client
+	Uploader *reddit_uploader.RedditUplaoder
+	Ctx      context.Context
 }
 
 func NewRedditClient() *RedditClient {
@@ -35,55 +36,68 @@ func NewRedditClient() *RedditClient {
 	if err != nil {
 		panic(err)
 	}
-	ctx := context.Background()
-	return &RedditClient{Client: client, Ctx: ctx}
+
+	uploader, err := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
+	if err != nil {
+		panic(err)
+	}
+
+	return &RedditClient{
+		Client:   client,
+		Uploader: uploader,
+		Ctx:      context.Background(),
+	}
 }
 
 func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, file []byte, filetype, imgurLink string) {
-	var redditPreviewLink, redditLink string
+	var redditPreviewLink string
+
+	defer close(out)
+
+	redditLink, err := c.Uploader.UploadMedia(file, filetype)
+	if err != nil {
+		out <- fmt.Sprintf("Error uploading media to reddit ❌: %s", err)
+		fmt.Println("Error uploading media to reddit", p.Subreddit, redditLink, err)
+		return
+	}
 
 	if filetype == "image.jpg" {
 		redditPreviewLink = ""
-		redditLink = RedditUpload(file, "image")
 	} else {
-		redditPreviewLink, _ = GetRedditPreviewLink(file)
-		redditLink = RedditUpload(file, "video")
-	}
-
-	client, err := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
-	if err != nil {
-		fmt.Printf("Error creating reddit uploader client: %s\n", err)
-		out <- fmt.Sprintf("Error creating reddit uploader client: %s\n", err)
-		close(out)
-		return
+		redditPreviewLink, err = c.GetRedditPreviewLink(file)
+		if err != nil {
+			out <- fmt.Sprintf("Error getting reddit preview link ❌: %s", err)
+			fmt.Println("Error getting reddit preview link", p.Subreddit, redditLink, err)
+			return
+		}
 	}
 
 	redditRes := func() (string, error) {
 		if redditPreviewLink == "" {
-			return client.SubmitImageLink(p, redditLink, "image.jpg")
+			return c.Uploader.SubmitImageLink(p, redditLink, "image.jpg")
 		} else {
-			return client.SubmitVideoLink(p, redditLink, redditPreviewLink, "video.mp4")
+			return c.Uploader.SubmitVideoLink(p, redditLink, redditPreviewLink, "video.mp4")
 		}
 	}
 
 	imgurRes := func() (string, error) {
 		if redditPreviewLink == "" {
-			return client.SubmitImageLink(p, imgurLink, "image.jpg")
+			return c.Uploader.SubmitImageLink(p, imgurLink, "image.jpg")
 		} else {
-			return client.SubmitImageLink(p, imgurLink, "video.mp4")
+			return c.Uploader.SubmitImageLink(p, imgurLink, "video.mp4")
 		}
 	}
 
 	r, err := redditRes()
 	if err != nil {
-		out <- fmt.Sprintf("Error submitting post using reddit native api❌: %s", err)
+		out <- fmt.Sprintf("Error submitting post using reddit native api ❌: %s", err)
 		fmt.Println("Error submitting post using reddit native api", p.Subreddit, r, err)
 
 		time.Sleep(time.Second * 1)
 
 		r, err = imgurRes()
 		if err != nil {
-			out <- fmt.Sprintf("Error submitting post using imgur api❌: %s", err)
+			out <- fmt.Sprintf("Error submitting post using imgur api ❌: %s", err)
 			fmt.Println("Error submitting post using imgur api", p.Subreddit, r, err)
 		} else {
 			out <- "Post submitted successfully using imgur ✅"
@@ -93,12 +107,12 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 		out <- "Post submitted successfully ✅"
 		fmt.Println("Post submitted successfully using reddit native api", p.Subreddit)
 	}
-
-	close(out)
 }
 
 func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption string, file []byte, filetype string) {
 	progress := flairs
+
+	defer close(out)
 
 	var imgurLink string
 
@@ -127,7 +141,6 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 	}
 
 	out <- Progress(progress).String()
-	close(out)
 }
 
 func (c *RedditClient) NewSubmission(text, sub, flair string) reddit_uploader.Submission {
@@ -143,6 +156,38 @@ func (c *RedditClient) NewSubmission(text, sub, flair string) reddit_uploader.Su
 	return params
 }
 
+func (c *RedditClient) GetRedditPreviewLink(video []byte) (string, error) {
+	name := getRandomName()
+	vName := name + ".mp4"
+	pName := name + ".jpg"
+
+	err := os.WriteFile(vName, video, 0644)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command("ffmpeg", "-i", vName, "-vframes", "1", pName)
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	preview, err := os.ReadFile(pName)
+	if err != nil {
+		return "", err
+	}
+
+	link, err := c.Uploader.UploadMedia(preview, "preview.jpg")
+	if err != nil {
+		panic(err)
+	}
+
+	os.Remove(vName)
+	os.Remove(pName)
+
+	return link, nil
+}
+
 func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	flairs, _, err := c.Client.Flair.GetPostFlairs(c.Ctx, subreddit)
 	if err != nil {
@@ -151,4 +196,14 @@ func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	}
 
 	return flairs
+}
+
+func getRandomName() string {
+	randomBytes := make([]byte, 16)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	return base64.URLEncoding.EncodeToString(randomBytes)
 }
