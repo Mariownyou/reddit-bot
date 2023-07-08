@@ -9,7 +9,8 @@ RUN mkdir /app
 ADD . /app
 WORKDIR /app
 
-RUN go mod download
-RUN go build -o main .
+RUN go mod download -mod=readonly
+# RUN go get github.com/mariownyou/go-reddit-uploader@main
+RUN go build -o main . -mod=readonly
 
 CMD ["/app/main"]
