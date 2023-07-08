@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
@@ -41,55 +39,6 @@ func NewRedditClient() *RedditClient {
 	return &RedditClient{Client: client, Ctx: ctx}
 }
 
-func (c *RedditClient) NewSubmitLinkRequest(title, url, subreddit, flair string) reddit.SubmitLinkRequest {
-	if flair == "" {
-		return reddit.SubmitLinkRequest{
-			Subreddit: subreddit,
-			Title:     title,
-			URL:       url,
-		}
-	}
-
-	flairs := map[string]string{}
-	for _, flair := range c.GetPostFlairs(subreddit) {
-		flairs[flair.Text] = flair.ID
-	}
-
-	return reddit.SubmitLinkRequest{
-		Subreddit: subreddit,
-		Title:     title,
-		URL:       url,
-		FlairID:   flairs[flair],
-	}
-}
-
-func (c *RedditClient) submitLink(submitLinkRequest reddit.SubmitLinkRequest, out chan string, retry int) error {
-	post, _, err := c.Client.Post.SubmitLink(c.Ctx, submitLinkRequest)
-	// err = errors.New("RATELIMIT: you are doing that too much. try again in 2 min min min minutes.")
-
-	if err != nil {
-		if strings.Contains(err.Error(), "RATELIMIT") && retry < 3 {
-			errorWords := strings.Split(err.Error(), " ")
-			minStr := errorWords[len(errorWords)-5]
-			min, _ := strconv.Atoi(minStr)
-
-			for i := 0; i <= min+1; i++ {
-				out <- fmt.Sprintf("Waiting %d minutes to retry post\n", min-i)
-				time.Sleep(time.Minute)
-			}
-
-			c.submitLink(submitLinkRequest, out, retry+1)
-		} else {
-			fmt.Printf("Error submitting post: %s\n", err)
-			out <- fmt.Sprintf("Error submitting post: %s\n", err)
-			return err
-		}
-	} else {
-		out <- fmt.Sprintf("The post is available at: %s\n", post.URL)
-	}
-	return nil
-}
-
 func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, file []byte, filetype, imgurLink string) {
 	var redditPreviewLink, redditLink string
 
@@ -104,6 +53,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	client, err := reddit_uploader.New(config.RedditUsername, config.RedditPassword, config.RedditID, config.RedditSecret)
 	if err != nil {
 		fmt.Printf("Error creating reddit uploader client: %s\n", err)
+		out <- fmt.Sprintf("Error creating reddit uploader client: %s\n", err)
 		close(out)
 		return
 	}
@@ -147,16 +97,6 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	close(out)
 }
 
-func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
-	flairs, _, err := c.Client.Flair.GetPostFlairs(c.Ctx, subreddit)
-	if err != nil {
-		fmt.Printf("Error getting flairs for subreddit: %s -- %s\n", subreddit, err)
-		return []*reddit.Flair{}
-	}
-
-	return flairs
-}
-
 func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption string, file []byte, filetype string) {
 	progress := flairs
 
@@ -174,7 +114,8 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 		}
 
 		submitChan := make(chan string)
-		params := reddit_uploader.Submission{Title: caption, Subreddit: sub, FlairID: flair}
+
+		params := c.NewSubmission(caption, sub, flair)
 		go c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {
@@ -187,4 +128,27 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 
 	out <- Progress(progress).String()
 	close(out)
+}
+
+func (c *RedditClient) NewSubmission(text, sub, flair string) reddit_uploader.Submission {
+	ids := map[string]string{}
+	for _, flair := range c.GetPostFlairs(sub) {
+		ids[flair.Text] = flair.ID
+	}
+
+	params := reddit_uploader.Submission{Title: text, Subreddit: sub}
+	if len(ids) > 0 {
+		params.FlairID = ids[flair]
+	}
+	return params
+}
+
+func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
+	flairs, _, err := c.Client.Flair.GetPostFlairs(c.Ctx, subreddit)
+	if err != nil {
+		fmt.Printf("Error getting flairs for subreddit: %s -- %s\n", subreddit, err)
+		return []*reddit.Flair{}
+	}
+
+	return flairs
 }

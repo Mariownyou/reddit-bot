@@ -9,9 +9,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const EnvFile = ".env.local"
-
 const (
+	// EnvFile          = ".env.local"
+	EnvFile          = ".env"
 	DriveDeleteAfter = 180
 )
 
