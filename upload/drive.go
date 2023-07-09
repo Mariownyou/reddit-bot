@@ -10,7 +10,7 @@ import (
 
 func DriveUpload(file []byte, filename string) string {
 	uploader, _ := drive_uploader.New(config.DriveCredentials)
-	link, fileID, err := uploader.Upload(file, filename)
+	link, fileID, err := uploader.ShareFile(file, filename)
 	if err != nil {
 		fmt.Println(err)
 		return ""
