@@ -106,7 +106,6 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	}
 
 	text += fmt.Sprintf("Title: %s\n", caption)
-	// text += fmt.Sprintf("Content Link: %s\n", link)
 
 	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Posting content to the following subreddits with flairs:\n"+text)
 	msgObj, _ := m.Send(msg)
@@ -116,18 +115,10 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 
 	for text := range out {
 		text += fmt.Sprintf("Title: %s\n", caption)
-		// text += fmt.Sprintf("Content Link: %s\n", link)
 		editMsg := tgbotapi.NewEditMessageText(u.Message.Chat.ID, mID, text)
 
 		m.Send(editMsg)
 	}
-
-	// go func() {
-	// 	if config.Debug {
-	// 		return
-	// 	}
-	// 	m.TwitterClient.Upload(caption, m.Data.file, m.Data.filetype)
-	// }()
 
 	if !config.Debug {
 		fmt.Println("Posting to twitter")
@@ -147,7 +138,7 @@ func DriveUplaodHandler(m *Manager, u tgbotapi.Update) {
 	}
 
 	file := upload.DownloadFile(m.GetFileURL(u))
-	link := upload.DriveUpload(file, u.Message.Caption)
+	link := upload.DriveShareFile(file, u.Message.Caption)
 
 	text := fmt.Sprintf("File will be deleted in %d minutes: %s", config.DriveDeleteAfter, link)
 	msg := tgbotapi.NewMessage(u.Message.Chat.ID, text)
@@ -194,17 +185,14 @@ func FlairsHandler(m *Manager, u tgbotapi.Update) {
 	m.Send(msg)
 }
 
-func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
-	if auth(u) {
-		return p
-	}
+func UploadAlbumHandler(m *Manager, u tgbotapi.Update) {
+	// check that the message contains more than one photo
 
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "You are not authorized to use this bot")
-	m.Send(msg)
-	return nil
+	fmt.Println("Photos Len:", len(u.Message.Photo))
 }
 
 func (m *Manager) Construct() {
+	m.Handle("/album", DefaultState, UploadAlbumHandler)
 	m.Handle("/flairs", DefaultState, FlairsHandler)
 	m.Handle("/imgur", DefaultState, ImgurUploadHandler)
 	m.Handle("/drive", DefaultState, DriveUplaodHandler)
@@ -222,4 +210,14 @@ func (m *Manager) Construct() {
 		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video with caption")
 		m.Send(msg)
 	})
+}
+
+func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
+	if auth(u) {
+		return p
+	}
+
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "You are not authorized to use this bot")
+	m.Send(msg)
+	return nil
 }

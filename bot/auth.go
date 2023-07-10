@@ -6,7 +6,7 @@ import (
 )
 
 func auth(update tgbotapi.Update) bool {
-	id := update.Message.Chat.ID
+	id := update.Message.From.ID
 
 	for _, user := range config.Users {
 		if user == id {

@@ -28,19 +28,21 @@ func or(strings ...string) string {
 }
 
 func (h HandlerInfo) isValid(update tgbotapi.Update, state State) bool {
+	checkState := h.state == state || h.state == AnyState
 	switch filter := h.filter.(type) {
 	case string:
 		msg := or(update.Message.Text, update.Message.Caption)
-		return (h.state == state || h.state == AnyState) &&
-			(strings.HasPrefix(msg, (h.filter).(string)) || h.filter == "*")
+		return checkState && (strings.HasPrefix(msg, (h.filter).(string)) || h.filter == "*")
 	case ContentType:
 		switch filter {
 		case OnText:
-			return (h.state == state || h.state == AnyState) && update.Message.Text != ""
+			return checkState && update.Message.Text != ""
 		case OnPhoto:
-			return (h.state == state || h.state == AnyState) && update.Message.Photo != nil
+			return checkState && update.Message.Photo != nil
 		case OnVideo:
-			return (h.state == state || h.state == AnyState) && update.Message.Video != nil
+			return checkState && update.Message.Video != nil
+		case OnMediaGroup:
+			return checkState && update.Message.MediaGroupID != ""
 		}
 	}
 

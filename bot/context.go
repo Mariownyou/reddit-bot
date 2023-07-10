@@ -1,11 +1,12 @@
 package bot
 
 type Context struct {
-	flairs   map[string]string
-	subs     []string
-	caption  string
-	file     []byte
-	filetype string
+	flairs    map[string]string
+	subs      []string
+	caption   string
+	file      []byte
+	filetype  string
+	albumSubs []string
 }
 
 func NewContext() Context {

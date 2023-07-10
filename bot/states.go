@@ -13,6 +13,7 @@ const (
 	OnText ContentType = iota
 	OnPhoto
 	OnVideo
+	OnMediaGroup
 )
 
 type State int
