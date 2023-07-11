@@ -122,7 +122,8 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 
 	if !config.Debug {
 		fmt.Println("Posting to twitter")
-		m.TwitterClient.Upload(caption, m.Data.file, m.Data.filetype)
+		text := fmt.Sprintf("%s\n%s", caption, config.TwitterHashtags)
+		m.TwitterClient.Upload(text, m.Data.file, m.Data.filetype)
 	}
 
 	m.Data = NewContext()

@@ -29,6 +29,7 @@ var (
 	TwitterConsumerSecret    string
 	TwitterAccessToken       string
 	TwitterAccessTokenSecret string
+	TwitterHashtags          string
 
 	TelegramToken string
 	Debug         bool
@@ -80,4 +81,5 @@ func init() {
 	TwitterConsumerSecret = os.Getenv("TWITTER_CONSUMER_SECRET")
 	TwitterAccessToken = os.Getenv("TWITTER_ACCESS_TOKEN")
 	TwitterAccessTokenSecret = os.Getenv("TWITTER_ACCESS_TOKEN_SECRET")
+	TwitterHashtags = os.Getenv("TWITTER_HASHTAGS")
 }
