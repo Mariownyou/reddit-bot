@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -45,7 +45,7 @@ func init() {
 
 	// check if .env file exists
 	path := cwd + "/" + EnvFile
-	fmt.Println(path)
+	log.Println(path)
 	_, err = os.Stat(path)
 	if err == nil {
 		err := godotenv.Load(path)

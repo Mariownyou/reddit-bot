@@ -3,8 +3,8 @@ package upload
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 
@@ -89,20 +89,30 @@ func ImgurUpload(file []byte, filetype string) string {
 		panic(err)
 	}
 
+	type ImgurResponse struct {
+		Data struct {
+			Link string `json:"link"`
+		} `json:"data"`
+	}
+
 	// Unmarshal the response
-	var data map[string]interface{}
+	var data ImgurResponse
 	if err = json.Unmarshal(body, &data); err != nil {
 		panic(err)
 	}
 
 	// Get the link
-	link := data["data"].(map[string]interface{})["link"].(string)
+	link := data.Data.Link
+	if link == "" {
+		log.Println("imgur response:", filetype, string(body))
+		panic("Imgur link is empty")
+	}
 
 	if filetype == "video" {
 		link = link[:len(link)-3] + "gifv"
 	}
 
 	// Return the link
-	fmt.Printf("Imgur Link: %s\nResponse: %s\n", link, string(body))
+	log.Printf("Imgur Link: %s\nResponse: %s\n", link, string(body))
 	return link
 }

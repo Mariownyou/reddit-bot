@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -26,7 +27,7 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 
 	switch {
 	case u.Message.Photo != nil:
-		filetype = "photo.jpg"
+		filetype = "image.jpg"
 	case u.Message.Video != nil:
 		filetype = "video.mp4"
 	}
@@ -74,7 +75,7 @@ func CreateFlairMessageBind(m *Manager, u tgbotapi.Update) State {
 		m.Data.flairs = flairsMap
 
 		if len(m.Data.subs) == 0 {
-			fmt.Println("map", m.Data.flairs)
+			log.Println("map", m.Data.flairs)
 			text := fmt.Sprintf("No flairs found for sub %s, posting without flair", sub)
 
 			msg := tgbotapi.NewMessage(u.Message.Chat.ID, text)
@@ -121,7 +122,7 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	}
 
 	if !config.Debug {
-		fmt.Println("Posting to twitter")
+		log.Println("Posting to twitter")
 		text := fmt.Sprintf("%s\n%s", caption, config.TwitterHashtags)
 		m.TwitterClient.Upload(text, m.Data.file, m.Data.filetype)
 	}
@@ -189,7 +190,7 @@ func FlairsHandler(m *Manager, u tgbotapi.Update) {
 func UploadAlbumHandler(m *Manager, u tgbotapi.Update) {
 	// check that the message contains more than one photo
 
-	fmt.Println("Photos Len:", len(u.Message.Photo))
+	log.Println("Photos Len:", len(u.Message.Photo))
 }
 
 func (m *Manager) Construct() {

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"time"
@@ -57,7 +58,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	redditLink, err := c.Uploader.UploadMedia(file, filetype)
 	if err != nil {
 		out <- fmt.Sprintf("Error uploading media to reddit ❌: %s", err)
-		fmt.Println("Error uploading media to reddit", p.Subreddit, redditLink, err)
+		log.Println("Error uploading media to reddit", p.Subreddit, redditLink, err)
 		return
 	}
 
@@ -67,7 +68,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 		redditPreviewLink, err = c.GetRedditPreviewLink(file)
 		if err != nil {
 			out <- fmt.Sprintf("Error getting reddit preview link ❌: %s", err)
-			fmt.Println("Error getting reddit preview link", p.Subreddit, redditLink, err)
+			log.Println("Error getting reddit preview link", p.Subreddit, redditLink, err)
 			return
 		}
 	}
@@ -91,21 +92,21 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	r, err := redditRes()
 	if err != nil {
 		out <- fmt.Sprintf("Error submitting post using reddit native api ❌: %s", err)
-		fmt.Println("Error submitting post using reddit native api", p.Subreddit, r, err)
+		log.Println("Error submitting post using reddit native api", p.Subreddit, r, err)
 
 		time.Sleep(time.Second * 1)
 
 		r, err = imgurRes()
 		if err != nil {
 			out <- fmt.Sprintf("Error submitting post using imgur api ❌: %s", err)
-			fmt.Println("Error submitting post using imgur api", p.Subreddit, r, err)
+			log.Println("Error submitting post using imgur api", p.Subreddit, r, err)
 		} else {
 			out <- "Post submitted successfully using imgur ✅"
-			fmt.Println("Post submitted successfully using imgur api", p.Subreddit)
+			log.Println("Post submitted successfully using imgur api", p.Subreddit)
 		}
 	} else {
 		out <- "Post submitted successfully ✅"
-		fmt.Println("Post submitted successfully using reddit native api", p.Subreddit)
+		log.Println("Post submitted successfully using reddit native api", p.Subreddit)
 	}
 }
 

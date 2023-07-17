@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"mime"
 	"path/filepath"
 	"time"
@@ -99,7 +100,7 @@ func DriveShareFile(file []byte, filename string) string {
 	uploader, _ := drive_uploader.New(config.DriveCredentials)
 	link, fileID, err := uploader.ShareFile(file, filename)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return ""
 	}
 
