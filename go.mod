@@ -14,7 +14,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.5 // indirect
 	github.com/googleapis/gax-go/v2 v2.11.0 // indirect
 	github.com/mariownyou/go-drive-uploader v0.0.0-20230711162944-240a1a58471d // indirect
-	github.com/mariownyou/go-reddit-uploader v0.0.0-20230708113825-c1233cccea80 // indirect
+	github.com/mariownyou/go-reddit-uploader v0.0.0-20230718205908-5047c983f2b5 // indirect
 	github.com/mariownyou/go-twitter-uploader v0.0.0-20230704082844-7af6bbf8ec09 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.10.0 // indirect

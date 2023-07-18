@@ -55,6 +55,8 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 
 	defer close(out)
 
+	log.Println("Submitting post", p, filetype)
+
 	redditLink, err := c.Uploader.UploadMedia(file, filetype)
 	if err != nil {
 		out <- fmt.Sprintf("Error uploading media to reddit ❌: %s", err)
