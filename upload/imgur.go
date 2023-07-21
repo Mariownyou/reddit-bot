@@ -40,7 +40,7 @@ func ImgurUpload(file []byte, filetype string) string {
 	var fw io.Writer
 	var err error
 
-	if filetype == "image" {
+	if filetype == "image.jpg" {
 		fw, err = w.CreateFormFile("image", filename)
 	} else {
 		fw, err = w.CreateFormFile("video", filename)

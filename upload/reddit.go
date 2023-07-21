@@ -119,11 +119,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 
 	var imgurLink string
 
-	if filetype == "image.jpg" {
-		imgurLink = ImgurUpload(file, "image")
-	} else {
-		imgurLink = ImgurUpload(file, "video")
-	}
+	imgurLink = ImgurUpload(file, filetype)
 
 	for sub, flair := range flairs {
 		if flair == "None" {

@@ -155,15 +155,16 @@ func ImgurUploadHandler(m *Manager, u tgbotapi.Update) {
 	}
 
 	file := upload.DownloadFile(m.GetFileURL(u))
-	var link string
+	var filetype string
 
 	switch {
 	case u.Message.Photo != nil:
-		link = upload.ImgurUpload(file, "image")
+		filetype = "image.jpg"
 	case u.Message.Video != nil:
-		link = upload.ImgurUpload(file, "video")
+		filetype = "video.mp4"
 	}
 
+	link := upload.ImgurUpload(file, filetype)
 	msg := tgbotapi.NewMessage(u.Message.Chat.ID, link)
 	m.Send(msg)
 }
