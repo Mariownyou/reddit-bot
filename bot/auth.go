@@ -6,7 +6,12 @@ import (
 )
 
 func auth(update tgbotapi.Update) bool {
-	id := update.Message.From.ID
+	var id int64
+	if from := update.Message.From; from != nil {
+		id = from.ID
+	} else if from := update.CallbackQuery.From; from != nil {
+		id = from.ID
+	}
 
 	for _, user := range config.Users {
 		if user == id {
