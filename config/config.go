@@ -31,6 +31,9 @@ var (
 	TwitterAccessTokenSecret string
 	TwitterHashtags          string
 
+	UseNativeUplaoder bool
+	SendPreview       bool
+
 	TelegramToken string
 	Debug         bool
 	Subreddits    = []string{"test"}
@@ -63,6 +66,9 @@ func init() {
 
 	TelegramToken = os.Getenv("TELEGRAM_TOKEN")
 	Debug = os.Getenv("DEBUG") == "true"
+
+	UseNativeUplaoder = os.Getenv("USE_NATIVE_UPLOADER") == "true"
+	SendPreview = os.Getenv("SendPreview") == "true"
 
 	if users := os.Getenv("USERS"); users != "" {
 		for _, user := range strings.Split(users, ",") {

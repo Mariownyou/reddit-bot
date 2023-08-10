@@ -30,6 +30,14 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 		filetype = "image.jpg"
 	case u.Message.Video != nil:
 		filetype = "video.mp4"
+		preview, err := m.Client.GetPreviewFile(file)
+		if err != nil {
+			panic(err)
+		}
+		m.Data.preview = preview
+		if config.SendPreview {
+			m.SendPhoto(u.Message.From.ID, preview)
+		}
 	}
 
 	m.Data.file = file

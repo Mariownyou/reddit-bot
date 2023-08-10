@@ -5,6 +5,7 @@ type Context struct {
 	subs      []string
 	caption   string
 	file      []byte
+	preview   []byte
 	filetype  string
 	albumSubs []string
 }

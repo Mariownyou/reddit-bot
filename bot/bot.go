@@ -108,6 +108,18 @@ func (bot *Bot) GetFileURL(u tgbotapi.Update) string {
 	return url
 }
 
+func (bot *Bot) SendPhoto(chatID int64, file []byte) {
+	fb := tgbotapi.FileBytes{
+		Name:  "Photo",
+		Bytes: file,
+	}
+
+	photo := tgbotapi.NewPhoto(chatID, fb)
+	if _, err := bot.Send(photo); err != nil {
+		panic(err)
+	}
+}
+
 // func (bot *Bot) UpdateHandler(update tgbotapi.Update) {
 // 	if !bot.auth(update) {
 // 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "You are not authorized to use this bot "+fmt.Sprint(update.Message.Chat.ID))
