@@ -90,6 +90,16 @@ func (u *Uploader) SubmitVideo(params Submission, videoPath, previewPath string)
 	return u.SubmitMedia(post)
 }
 
+func (u *Uploader) SubmitLink(params Submission, link string) error {
+	post := struct {
+		Submission
+		Kind       string `url:"kind,omitempty"`
+		URL        string `url:"url,omitempty"`
+	}{params, "link", link}
+
+	return u.SubmitMedia(post)
+}
+
 func (u *Uploader) Post(url string, data io.Reader, auth ...bool) *http.Response {
 	req, err := http.NewRequest("POST", url, data)
 	if err != nil {
@@ -163,6 +173,8 @@ func (u *Uploader) SubmitMedia(post interface{}) error {
 	if err != nil {
 		panic(fmt.Errorf("Error parsing query params: %s", err))
 	}
+
+	form.Add("api_type", "json")
 
 	resp := u.Post("https://oauth.reddit.com/api/submit", strings.NewReader(form.Encode()))
 	defer resp.Body.Close()
@@ -256,7 +268,6 @@ type Submission struct {
 	Spoiler     bool  `url:"spoiler,omitempty"`
 }
 
-
 type SubmitMediaResponse struct {
 	Message string `json:"message"`
 	Error   int    `json:"error"`
@@ -270,10 +281,10 @@ type SubmitMediaResponse struct {
 	} `json:"json"`
 }
 
-func ParseErrors(resp *http.Response) error {
+func ParseErrors(r *http.Response) error {
 	var content SubmitMediaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&content); err != nil {
-		return fmt.Errorf("ERROR: Could not unmarshal response: %s\n", err)
+	if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
+		return fmt.Errorf("ERROR: Could not decode response: %s\n", err)
 	}
 
 	if len(content.JSON.Errors) > 0 {
@@ -281,10 +292,9 @@ func ParseErrors(resp *http.Response) error {
 	}
 
 	if content.Message != "" {
-		return fmt.Errorf("ERROR: %s : %d", content.Message, content.Error)
+		return fmt.Errorf("ERROR: Could not submit media: %s\n", content.Message)
 	}
 
-	fmt.Println(content.JSON.Data)
-
+	fmt.Println("Response Submit Media", content.JSON.Data)
 	return nil
 }

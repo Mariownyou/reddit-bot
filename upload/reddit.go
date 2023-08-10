@@ -98,29 +98,27 @@ func (u *RedditUploader) Upload() error {
 	return u.srv.SubmitImage(u.post, u.mediaPath)
 }
 
-// type ImgurUploader struct {
-// 	srv       *reddit_uploader.Uploader
-// 	post      reddit_uploader.Submission
-// 	mediaLink string
-// 	isVideo   bool
-// }
+type ImgurUploader struct {
+	srv       *reddit_uploader.Uploader
+	post      reddit_uploader.Submission
+	media     []byte
+	filename  string
+}
 
-// func (u *ImgurUploader) PrintResponse(out chan string, resp string) {
-// 	out <- "Post submitted successfully using imgur ✅"
-// 	log.Println("Post submitted successfully using imgur api", u.post.Subreddit)
-// }
+func (u *ImgurUploader) PrintResponse(out chan string, resp string) {
+	out <- "Post submitted successfully using imgur ✅"
+	log.Println("Post submitted successfully using imgur api", u.post.Subreddit)
+}
 
-// func (u *ImgurUploader) PrintError(out chan string, err error, resp string) {
-// 	out <- fmt.Sprintf("Error submitting post using imgur api ❌: %s", err)
-// 	log.Println("Error submitting post using imgur api", u.post.Subreddit, resp, err)
-// }
+func (u *ImgurUploader) PrintError(out chan string, err error, resp string) {
+	out <- fmt.Sprintf("Error submitting post using imgur api ❌: %s", err)
+	log.Println("Error submitting post using imgur api", u.post.Subreddit, resp, err)
+}
 
-// func (u *ImgurUploader) Upload() (string, error) {
-// 	if u.isVideo {
-// 		return u.srv.SubmitImageLink(u.post, u.mediaLink, "video.mp4")
-// 	}
-// 	return u.srv.SubmitImageLink(u.post, u.mediaLink, "image.jpg")
-// }
+func (u *ImgurUploader) Upload() error {
+	link := ImgurUpload(u.media, u.filename)
+	return u.srv.SubmitLink(u.post, link)
+}
 
 func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, file []byte, filetype, imgurLink string) {
 	defer close(out)
@@ -134,23 +132,24 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	// 	return
 	// }
 
-	os.Remove(filetype)
+	name := getRandomName() + filetype
+	os.Remove(name)
 	os.Remove("preview.jpg")
-	err := os.WriteFile(filetype, file, 0644)
+	err := os.WriteFile(name, file, 0644)
     check(err)
 
 	redditUploader := &RedditUploader{
 		srv:       c.Uploader,
 		post:      p,
-		mediaPath: filetype,
+		mediaPath: name,
 		isVideo:   !(filetype == "image.jpg"),
 	}
 
 	// imgurUploader := &ImgurUploader{
-	// 	srv:       c.Uploader,
-	// 	post:      p,
-	// 	mediaLink: imgurLink,
-	// 	isVideo:   !(filetype == "image.jpg"),
+	// 	srv:      c.Uploader,
+	// 	post:     p,
+	// 	media:    file,
+	// 	filename: filetype,
 	// }
 
 	uploaders := []Uploader{redditUploader}
@@ -165,7 +164,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 		time.Sleep(time.Second * 1)
 	}
 
-	os.Remove(filetype)
+	os.Remove(name)
 	os.Remove("preview.jpg")
 }
 
@@ -206,8 +205,6 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 	progress := flairs
 
 	defer close(out)
-
-	// imgurLink := ImgurUpload(file, filetype)
 
  	for sub, flair := range flairs {
 		if flair == "None" {
