@@ -233,7 +233,7 @@ func (c *RedditClient) NewSubmission(text, sub, flair string) reddit_uploader.Su
 		ids[flair.Text] = flair.ID
 	}
 
-	params := reddit_uploader.Submission{Title: text, Subreddit: sub}
+	params := reddit_uploader.Submission{Title: text, Subreddit: sub, NSFW: true}
 	if len(ids) > 0 {
 		params.FlairID = ids[flair]
 	}
