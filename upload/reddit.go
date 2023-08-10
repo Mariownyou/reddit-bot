@@ -122,7 +122,7 @@ func (u *RedditUploader) Upload() error {
 // 	return u.srv.SubmitImageLink(u.post, u.mediaLink, "image.jpg")
 // }
 
-func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, filetype, imgurLink string) {
+func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, file []byte, filetype, imgurLink string) {
 	defer close(out)
 
 	log.Println("Submitting post", p, filetype)
@@ -133,6 +133,11 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	// 	log.Println("Error uploading media to reddit", p.Subreddit, redditLink, err)
 	// 	return
 	// }
+
+	os.Remove(filetype)
+	os.Remove("preview.jpg")
+	err := os.WriteFile(filetype, file, 0644)
+    check(err)
 
 	redditUploader := &RedditUploader{
 		srv:       c.Uploader,
@@ -152,13 +157,16 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	for _, upl := range uploaders {
 		err := upl.Upload()
 		if err == nil {
-			redditUploader.PrintResponse(out, "")
+			redditUploader.PrintResponse(out, "uploaded")
 			break
 		}
 
 		redditUploader.PrintError(out, err, "")
 		time.Sleep(time.Second * 1)
 	}
+
+	os.Remove(filetype)
+	os.Remove("preview.jpg")
 }
 
 func GetPreviewFile(filename string) (string, error) {
@@ -201,10 +209,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 
 	// imgurLink := ImgurUpload(file, filetype)
 
-    err := os.WriteFile(filetype, file, 0644)
-    check(err)
-
-	for sub, flair := range flairs {
+ 	for sub, flair := range flairs {
 		if flair == "None" {
 			flair = ""
 		}
@@ -212,7 +217,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 		submitChan := make(chan string)
 
 		params := c.NewSubmission(caption, sub, flair)
-		go c.Submit(submitChan, params, filetype, imgurLink)
+		go c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {
 			progress[sub] = msg
@@ -221,10 +226,6 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 
 		time.Sleep(time.Second * 3)
 	}
-
-	err = os.Remove(filetype)
-	check(err)
-	os.Remove("preview.jpg")
 
 	out <- Progress(progress).String()
 }

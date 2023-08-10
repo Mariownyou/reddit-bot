@@ -57,8 +57,6 @@ func (u *Uploader) GetAccessToken() (string, error) {
 		return "", fmt.Errorf("ERROR: Could not unmarshal response: %s\n", err)
 	}
 
-	fmt.Println(content)
-
 	if content.Error != 0 {
 		return "", fmt.Errorf("ERROR: Could not get access token: %d\n", content.Error)
 	}
@@ -167,12 +165,9 @@ func (u *Uploader) SubmitMedia(post interface{}) error {
 	}
 
 	resp := u.Post("https://oauth.reddit.com/api/submit", strings.NewReader(form.Encode()))
-
 	defer resp.Body.Close()
-	content, err := io.ReadAll(resp.Body)
-	println(content)
 
-	return nil
+	return ParseErrors(resp)
 }
 
 type UploadMediaResponse struct {
@@ -259,4 +254,37 @@ type Submission struct {
 	Resubmit    bool  `url:"resubmit,omitempty"`
 	NSFW        bool  `url:"nsfw,omitempty"`
 	Spoiler     bool  `url:"spoiler,omitempty"`
+}
+
+
+type SubmitMediaResponse struct {
+	Message string `json:"message"`
+	Error   int    `json:"error"`
+	JSON    struct {
+		Errors [][]string `json:"errors"`
+		Data   struct {
+			URL               string `json:"url"`
+			UserSubmittedPage string `json:"user_submitted_page"`
+			WebsocketURL      string `json:"websocket_url"`
+		} `json:"data"`
+	} `json:"json"`
+}
+
+func ParseErrors(resp *http.Response) error {
+	var content SubmitMediaResponse
+	if err := json.NewDecoder(resp.Body).Decode(&content); err != nil {
+		return fmt.Errorf("ERROR: Could not unmarshal response: %s\n", err)
+	}
+
+	if len(content.JSON.Errors) > 0 {
+		return fmt.Errorf("ERROR: Could not submit media: %s\n", content.JSON.Errors[0][1])
+	}
+
+	if content.Message != "" {
+		return fmt.Errorf("ERROR: %s : %d", content.Message, content.Error)
+	}
+
+	fmt.Println(content.JSON.Data)
+
+	return nil
 }
