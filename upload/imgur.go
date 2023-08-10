@@ -61,7 +61,7 @@ func ImgurUpload(file []byte, filetype string) string {
 
 	// Create a new request
 	var req *http.Request
-	if filetype == "image" {
+	if filetype == "image" || filetype == "image.jpg" {
 		req, err = http.NewRequest("POST", imgurLink, buf)
 	} else {
 		req, err = http.NewRequest("POST", imgurVideoLink, buf)
@@ -108,7 +108,7 @@ func ImgurUpload(file []byte, filetype string) string {
 		panic("Imgur link is empty")
 	}
 
-	if filetype == "video" {
+	if filetype == "video" || filetype == "video.mp4" {
 		link = link[:len(link)-3] + "gifv"
 	}
 

@@ -116,6 +116,7 @@ func (u *ImgurUploader) PrintError(out chan string, err error, resp string) {
 }
 
 func (u *ImgurUploader) Upload() error {
+	fmt.Printf("Uploading to imgur: %s\n", u.filename)
 	link := ImgurUpload(u.media, u.filename)
 	return u.srv.SubmitLink(u.post, link)
 }
