@@ -75,6 +75,14 @@ func (u *RedditUploader) PrintError(out chan string, err error, resp string) {
 	log.Println("Error submitting post using reddit native api", u.post.Subreddit, resp, err)
 }
 
+func (u *RedditUploader) ConvertToGif() {
+	command := exec.Command("ffmpeg", "-i", u.mediaPath, "-vf", "scale=800:-1", "-r", "20", "gif.gif")
+	err := command.Run()
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (u *RedditUploader) Upload() error {
 	if u.isVideo {
 		previewPath, err := GetPreviewFile(u.mediaPath)
@@ -85,8 +93,12 @@ func (u *RedditUploader) Upload() error {
 	}
 
 	if u.filetype == "gif.mp4" {
-		link := ImgurUpload(u.media, "video.mp4")
-		return u.srv.SubmitLink(u.post, link)
+		os.Remove("gif.gif")
+		u.ConvertToGif()
+		u.mediaPath = "gif.gif"
+		defer os.Remove("gif.gif")
+		// link := ImgurUpload(u.media, "video.mp4")
+		// return u.srv.SubmitLink(u.post, link)
 	}
 
 	return u.srv.SubmitImage(u.post, u.mediaPath)
