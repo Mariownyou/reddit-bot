@@ -199,7 +199,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 		submitChan := make(chan string)
 
 		params := c.NewSubmission(caption, sub, flair)
-		go c.Submit(submitChan, params, file, filetype, imgurLink)
+		c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {
 			progress[sub] = msg
