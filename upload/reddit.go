@@ -60,6 +60,7 @@ type RedditUploader struct {
 	srv       *reddit_uploader.Uploader
 	post      reddit_uploader.Submission
 	mediaPath string
+	media     []byte
 	filetype  string
 	isVideo   bool
 }
@@ -74,14 +75,6 @@ func (u *RedditUploader) PrintError(out chan string, err error, resp string) {
 	log.Println("Error submitting post using reddit native api", u.post.Subreddit, resp, err)
 }
 
-func (u *RedditUploader) ConvertToGif() {
-	command := exec.Command("ffmpeg", "-i", u.mediaPath, "-vf", "scale=320:-1", "-r", "10", "-f", "gif", "gif.gif")
-	err := command.Run()
-	if err != nil {
-		panic(err)
-	}
-}
-
 func (u *RedditUploader) Upload() error {
 	if u.isVideo {
 		previewPath, err := GetPreviewFile(u.mediaPath)
@@ -92,10 +85,8 @@ func (u *RedditUploader) Upload() error {
 	}
 
 	if u.filetype == "gif.mp4" {
-		os.Remove("gif.gif")
-		u.ConvertToGif()
-		u.mediaPath = "gif.gif"
-		defer os.Remove("gif.gif")
+		link := ImgurUpload(u.media, "video.mp4")
+		return u.srv.SubmitLink(u.post, link)
 	}
 
 	return u.srv.SubmitImage(u.post, u.mediaPath)
@@ -139,6 +130,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 		srv:       c.Uploader,
 		post:      p,
 		mediaPath: name,
+		media:     file,
 		filetype:  filetype,
 		isVideo:   filetype == "video.mp4",
 	}
