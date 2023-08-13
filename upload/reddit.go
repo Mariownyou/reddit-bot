@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"strconv"
+	"strings"
+	"regexp"
 	"fmt"
 	"log"
 	"os"
@@ -162,6 +165,21 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 			break
 		}
 
+		// simple load balancer
+		if strings.Contains(err.Error(), "Take a break for") {
+			re := regexp.MustCompile(`(\d+)`)
+			m := re.FindAllString(err.Error(), -1)
+			if len(m) > 0 {
+				mins, _ := strconv.Atoi(m[0])
+				redditUploader.PrintError(out, err, fmt.Sprintf("will repeat in %d minutes", mins))
+				time.Sleep(time.Minute * time.Duration(mins+1))
+				err = upl.Upload()
+				if err == nil {
+					break
+				}
+			}
+		}
+
 		redditUploader.PrintError(out, err, "")
 		time.Sleep(time.Second * 1)
 	}
@@ -196,17 +214,21 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 			flair = ""
 		}
 
+		if flair == "skip" {
+			continue
+		}
+
 		submitChan := make(chan string)
 
 		params := c.NewSubmission(caption, sub, flair)
-		c.Submit(submitChan, params, file, filetype, imgurLink)
+		go c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {
 			progress[sub] = msg
 			out <- Progress(progress).String()
 		}
 
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 2)
 	}
 
 	out <- Progress(progress).String()
