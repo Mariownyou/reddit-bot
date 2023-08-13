@@ -60,6 +60,7 @@ type RedditUploader struct {
 	srv       *reddit_uploader.Uploader
 	post      reddit_uploader.Submission
 	mediaPath string
+	filetype  string
 	isVideo   bool
 }
 
@@ -73,19 +74,13 @@ func (u *RedditUploader) PrintError(out chan string, err error, resp string) {
 	log.Println("Error submitting post using reddit native api", u.post.Subreddit, resp, err)
 }
 
-// func (u *RedditUploader) GetRedditPreviewLink(video []byte) (string, error) {
-// 	preview, err := GetPreviewFile(video)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	link, err := u.srv.UploadMedia(preview, "preview.jpg")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	return link, nil
-// }
+func (u *RedditUploader) ConvertToGif() {
+	command := exec.Command("ffmpeg", "-i", u.mediaPath, "-vf", "scale=320:-1", "-r", "10", "-f", "gif", "gif.gif")
+	err := command.Run()
+	if err != nil {
+		panic(err)
+	}
+}
 
 func (u *RedditUploader) Upload() error {
 	if u.isVideo {
@@ -95,14 +90,22 @@ func (u *RedditUploader) Upload() error {
 		}
 		return u.srv.SubmitVideo(u.post, u.mediaPath, previewPath)
 	}
+
+	if u.filetype == "gif.mp4" {
+		os.Remove("gif.gif")
+		u.ConvertToGif()
+		u.mediaPath = "gif.gif"
+		defer os.Remove("gif.gif")
+	}
+
 	return u.srv.SubmitImage(u.post, u.mediaPath)
 }
 
 type ImgurUploader struct {
-	srv       *reddit_uploader.Uploader
-	post      reddit_uploader.Submission
-	media     []byte
-	filename  string
+	srv      *reddit_uploader.Uploader
+	post     reddit_uploader.Submission
+	media    []byte
+	filename string
 }
 
 func (u *ImgurUploader) PrintResponse(out chan string, resp string) {
@@ -126,24 +129,18 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 
 	log.Println("Submitting post", p, filetype)
 
-	// redditLink, err := c.Uploader.UploadMedia(file, filetype)
-	// if err != nil {
-	// 	out <- fmt.Sprintf("Error uploading media to reddit ❌: %s", err)
-	// 	log.Println("Error uploading media to reddit", p.Subreddit, redditLink, err)
-	// 	return
-	// }
-
 	name := getRandomName() + filetype
 	os.Remove(name)
 	os.Remove("preview.jpg")
 	err := os.WriteFile(name, file, 0644)
-    check(err)
+	check(err)
 
 	redditUploader := &RedditUploader{
 		srv:       c.Uploader,
 		post:      p,
 		mediaPath: name,
-		isVideo:   !(filetype == "image.jpg"),
+		filetype:  filetype,
+		isVideo:   filetype == "video.mp4",
 	}
 
 	// imgurUploader := &ImgurUploader{
@@ -170,36 +167,19 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 }
 
 func GetPreviewFile(filename string) (string, error) {
-	// name := getRandomName()
-	// vName := name + ".mp4"
-	// pName := name + ".jpg"
-
-	// err := os.WriteFile(vName, video, 0644)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	cmd := exec.Command("ffmpeg", "-i", filename, "-vframes", "1", "preview.jpg")
 	err := cmd.Run()
 	if err != nil {
 		return "", err
 	}
 
-	// preview, err := os.ReadFile(pName)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// defer os.Remove(vName)
-	// defer os.Remove(pName)
-
 	return "preview.jpg", nil
 }
 
 func check(e error) {
-    if e != nil {
-        panic(e)
-    }
+	if e != nil {
+		panic(e)
+	}
 }
 
 func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, caption string, file []byte, filetype string) {
@@ -207,7 +187,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 
 	defer close(out)
 
- 	for sub, flair := range flairs {
+	for sub, flair := range flairs {
 		if flair == "None" {
 			flair = ""
 		}
@@ -267,20 +247,6 @@ func (c *RedditClient) GetPreviewFile(video []byte) ([]byte, error) {
 
 	return preview, nil
 }
-
-// func (c *RedditClient) GetRedditPreviewLink(video []byte) (string, error) {
-// 	preview, err := c.GetPreviewFile(video)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	link, err := c.Uploader.UploadMedia(preview, "preview.jpg")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	return link, nil
-// }
 
 func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	flairs, _, err := c.Client.Flair.GetPostFlairs(c.Ctx, subreddit)

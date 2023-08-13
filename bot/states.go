@@ -9,10 +9,12 @@ const (
 	CreateFlairMessageState
 	AwaitFlairMessageState
 	SubmitPostState
+	AwaitSendState
 
 	OnText ContentType = iota
 	OnPhoto
 	OnVideo
+	OnAnimation
 	OnMediaGroup
 )
 

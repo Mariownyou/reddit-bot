@@ -99,6 +99,9 @@ func (bot *Bot) GetFileURL(u tgbotapi.Update) string {
 	if u.Message.Video != nil {
 		fileID = u.Message.Video.FileID
 	}
+	if u.Message.Animation != nil {
+		fileID = u.Message.Animation.FileID
+	}
 
 	url, err := bot.GetFileDirectURL(fileID)
 	if err != nil {

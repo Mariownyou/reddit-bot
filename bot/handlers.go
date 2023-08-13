@@ -30,14 +30,8 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 		filetype = "image.jpg"
 	case u.Message.Video != nil:
 		filetype = "video.mp4"
-		preview, err := m.Client.GetPreviewFile(file)
-		if err != nil {
-			panic(err)
-		}
-		m.Data.preview = preview
-		if config.SendPreview {
-			m.SendPhoto(u.Message.From.ID, preview)
-		}
+	case u.Message.Animation != nil:
+		filetype = "gif.mp4"
 	}
 
 	m.Data.file = file
@@ -211,6 +205,7 @@ func (m *Manager) Construct() {
 	// Submit post states
 	m.Handle(OnPhoto, DefaultState, PostHandler)
 	m.Handle(OnVideo, DefaultState, PostHandler)
+	m.Handle(OnAnimation, DefaultState, PostHandler)
 
 	m.Handle(OnText, AwaitFlairMessageState, AwaitFlairMessageBind)
 	m.Bind(CreateFlairMessageState, CreateFlairMessageBind)

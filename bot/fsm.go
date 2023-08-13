@@ -2,6 +2,7 @@ package bot
 
 import (
 	"strings"
+	"encoding/json"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -41,6 +42,8 @@ func (h HandlerInfo) isValid(update tgbotapi.Update, state State) bool {
 			return checkState && update.Message.Photo != nil
 		case OnVideo:
 			return checkState && update.Message.Video != nil
+		case OnAnimation:
+			return checkState && update.Message.Animation != nil
 		case OnMediaGroup:
 			return checkState && update.Message.MediaGroupID != ""
 		}
@@ -85,6 +88,10 @@ func (m *Manager) Run(middlewares ...middlewareFunc) {
 	updates := m.GetUpdatesChan(u)
 
 	for update := range updates {
+		if j, err := json.Marshal(update); err == nil {
+			println(string(j))
+		}
+
 		if middlewares != nil {
 			process := m.process
 			for _, middleware := range middlewares {
