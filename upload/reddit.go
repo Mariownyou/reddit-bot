@@ -55,8 +55,8 @@ func NewRedditClient() *RedditClient {
 
 type Uploader interface {
 	Upload() error
-	PrintResponse(out chan string, resp string)
-	PrintError(out chan string, err error, resp string)
+	Success(resp string) string
+	Error(err error, resp string) string
 }
 
 type RedditUploader struct {
@@ -68,14 +68,25 @@ type RedditUploader struct {
 	isVideo   bool
 }
 
-func (u *RedditUploader) PrintResponse(out chan string, resp string) {
-	out <- "Post submitted successfully ✅"
-	log.Println("Post submitted successfully using reddit native api", u.post.Subreddit)
+func NewRedditUploader(srv *reddit_uploader.Uploader, post reddit_uploader.Submission, mediaPath string, media []byte, filetype string, isVideo bool) *RedditUploader {
+	return &RedditUploader{
+		srv:       srv,
+		post:      post,
+		mediaPath: mediaPath,
+		media:     media,
+		filetype:  filetype,
+		isVideo:   isVideo,
+	}
 }
 
-func (u *RedditUploader) PrintError(out chan string, err error, resp string) {
-	out <- fmt.Sprintf("Error submitting post using reddit native api ❌: %s", err)
+func (u *RedditUploader) Success(resp string) string {
+	log.Println("Post submitted successfully using reddit native api", u.post.Subreddit)
+	return "Post submitted successfully ✅"
+}
+
+func (u *RedditUploader) Error(err error, resp string) string {
 	log.Println("Error submitting post using reddit native api", u.post.Subreddit, resp, err)
+	return fmt.Sprintf("Error submitting post using reddit native api ❌: %s: %s", err, resp)
 }
 
 func (u *RedditUploader) ConvertToGif() {
@@ -112,14 +123,16 @@ type ImgurUploader struct {
 	filename string
 }
 
-func (u *ImgurUploader) PrintResponse(out chan string, resp string) {
-	out <- "Post submitted successfully using imgur ✅"
+func (u *ImgurUploader) Success(resp string) string {
+	// out <- "Post submitted successfully using imgur ✅"
 	log.Println("Post submitted successfully using imgur api", u.post.Subreddit)
+	return "Post submitted successfully using imgur ✅"
 }
 
-func (u *ImgurUploader) PrintError(out chan string, err error, resp string) {
-	out <- fmt.Sprintf("Error submitting post using imgur api ❌: %s: %s", err, resp)
+func (u *ImgurUploader) Error(err error, resp string) string {
+	// out <- fmt.Sprintf("Error submitting post using imgur api ❌: %s: %s", err, resp)
 	log.Println("Error submitting post using imgur api", u.post.Subreddit, resp, err)
+	return fmt.Sprintf("Error submitting post using imgur api ❌: %s: %s", err, resp)
 }
 
 func (u *ImgurUploader) Upload() error {
@@ -159,7 +172,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	for _, upl := range uploaders {
 		err := upl.Upload()
 		if err == nil {
-			redditUploader.PrintResponse(out, "uploaded")
+			out <- redditUploader.Success("uploaded")
 			break
 		}
 
@@ -169,17 +182,18 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 			m := re.FindAllString(err.Error(), -1)
 			if len(m) > 0 {
 				mins, _ := strconv.Atoi(m[0])
-				redditUploader.PrintError(out, err, fmt.Sprintf("will repeat in %d minutes", mins))
-				time.Sleep(time.Minute * time.Duration(mins+1))
+				out <- redditUploader.Error(err, fmt.Sprintf("will repeat in %d minutes", mins))
+				time.Sleep(time.Second * time.Duration(mins+1))
+
 				err = upl.Upload()
 				if err == nil {
-					redditUploader.PrintResponse(out, "uploaded")
+					out <- redditUploader.Success("uploaded")
 					break
 				}
 			}
 		}
 
-		redditUploader.PrintError(out, err, "")
+		out <- redditUploader.Error(err, "Could not submit post: " + p.Subreddit)
 		time.Sleep(time.Second * 1)
 	}
 
