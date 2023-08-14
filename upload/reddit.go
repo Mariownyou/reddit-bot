@@ -80,9 +80,9 @@ func (u *RedditUploader) PrintError(out chan string, err error, resp string) {
 
 func (u *RedditUploader) ConvertToGif() {
 	command := exec.Command("ffmpeg", "-i", u.mediaPath, "-r", "20", "gif.gif")
-	err := command.Run()
+	out, err := command.Output()
 	if err != nil {
-		panic(err)
+		panic(out)
 	}
 }
 
@@ -100,8 +100,6 @@ func (u *RedditUploader) Upload() error {
 		u.ConvertToGif()
 		u.mediaPath = "gif.gif"
 		defer os.Remove("gif.gif")
-		// link := ImgurUpload(u.media, "video.mp4")
-		// return u.srv.SubmitLink(u.post, link)
 	}
 
 	return u.srv.SubmitImage(u.post, u.mediaPath)
