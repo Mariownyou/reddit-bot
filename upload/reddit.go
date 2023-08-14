@@ -120,7 +120,7 @@ func (u *ImgurUploader) PrintResponse(out chan string, resp string) {
 }
 
 func (u *ImgurUploader) PrintError(out chan string, err error, resp string) {
-	out <- fmt.Sprintf("Error submitting post using imgur api ❌: %s", err)
+	out <- fmt.Sprintf("Error submitting post using imgur api ❌: %s: %s", err, resp)
 	log.Println("Error submitting post using imgur api", u.post.Subreddit, resp, err)
 }
 
@@ -175,6 +175,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 				time.Sleep(time.Minute * time.Duration(mins+1))
 				err = upl.Upload()
 				if err == nil {
+					redditUploader.PrintResponse(out, "uploaded")
 					break
 				}
 			}
