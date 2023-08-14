@@ -79,7 +79,7 @@ func (u *RedditUploader) PrintError(out chan string, err error, resp string) {
 }
 
 func (u *RedditUploader) ConvertToGif() {
-	command := exec.Command("ffmpeg", "-i", u.mediaPath, "-vf", "scale=800:-1", "-r", "20", "gif.gif")
+	command := exec.Command("ffmpeg", "-i", u.mediaPath, "-vf", "scale=800:-1", "-vf", "fps=15", "-r", "20", "gif.gif")
 	err := command.Run()
 	if err != nil {
 		panic(err)
