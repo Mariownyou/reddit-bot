@@ -12,6 +12,15 @@ import (
 
 func PostHandler(m *Manager, u tgbotapi.Update) {
 	caption := u.Message.Caption
+	if c := u.Message.Text; c != "" {
+		caption = c
+	}
+
+	// remove #offtweet
+	if strings.Contains(caption, "#offtweet") {
+		caption = strings.ReplaceAll(caption, "#offtweet", "")
+		m.Data.tweet = false
+	}
 
 	isSubs, newCaption, Subs := findSubredditsInMessage(caption)
 	if !isSubs {
@@ -123,7 +132,7 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 		m.Send(editMsg)
 	}
 
-	if !config.Debug {
+	if !config.Debug && m.Data.tweet {
 		log.Println("Posting to twitter")
 		text := fmt.Sprintf("%s\n%s", caption, config.TwitterHashtags)
 		m.TwitterClient.Upload(text, m.Data.file, m.Data.filetype)

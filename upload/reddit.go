@@ -124,15 +124,15 @@ type ImgurUploader struct {
 }
 
 func (u *ImgurUploader) Success(resp string) string {
-	// out <- "Post submitted successfully using imgur ✅"
-	log.Println("Post submitted successfully using imgur api", u.post.Subreddit)
-	return "Post submitted successfully using imgur ✅"
+	msg := fmt.Sprintf("Post submitted successfully using imgur ✅ %s", u.post.Subreddit)
+	log.Println(msg)
+	return msg
 }
 
 func (u *ImgurUploader) Error(err error, resp string) string {
-	// out <- fmt.Sprintf("Error submitting post using imgur api ❌: %s: %s", err, resp)
-	log.Println("Error submitting post using imgur api", u.post.Subreddit, resp, err)
-	return fmt.Sprintf("Error submitting post using imgur api ❌: %s: %s", err, resp)
+	msg := fmt.Sprintf("Error submitting post using imgur api ❌: %s: %s", err, resp)
+	log.Println(msg)
+	return msg
 }
 
 func (u *ImgurUploader) Upload() error {
