@@ -106,14 +106,16 @@ func (u *RedditUploader) Upload() error {
 		return u.srv.SubmitVideo(u.post, u.mediaPath, previewPath)
 	}
 
+	path := u.mediaPath
+
 	if u.filetype == "gif.mp4" {
 		os.Remove("gif.gif")
 		u.ConvertToGif()
-		u.mediaPath = "gif.gif"
+		path = "gif.gif"
 		defer os.Remove("gif.gif")
 	}
 
-	return u.srv.SubmitImage(u.post, u.mediaPath)
+	return u.srv.SubmitImage(u.post, path)
 }
 
 type ImgurUploader struct {
@@ -184,10 +186,11 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 				mins, _ := strconv.Atoi(m[0])
 				out <- redditUploader.Error(err, fmt.Sprintf("will repeat in %d minutes", mins))
 
-				for i:=1; i<=mins+1; i++ {
+				for i:=1; i<=mins; i++ {
 					out <- fmt.Sprintf("🕣 Waiting to send post again in %d minutes", mins-i)
 					time.Sleep(time.Minute * 1)
 				}
+				time.Sleep(time.Minute * 1)
 
 				err = upl.Upload()
 				if err == nil {
