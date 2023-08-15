@@ -93,7 +93,7 @@ func (u *RedditUploader) ConvertToGif() {
 	command := exec.Command("ffmpeg", "-i", u.mediaPath, "-r", "20", "gif.gif")
 	out, err := command.Output()
 	if err != nil {
-		panic(out)
+		panic(string(out))
 	}
 }
 
@@ -183,7 +183,11 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 			if len(m) > 0 {
 				mins, _ := strconv.Atoi(m[0])
 				out <- redditUploader.Error(err, fmt.Sprintf("will repeat in %d minutes", mins))
-				time.Sleep(time.Second * time.Duration(mins+1))
+
+				for i:=1; i<=mins+1; i++ {
+					out <- fmt.Sprintf("🕣 Waiting to send post again in %d minutes", mins-i)
+					time.Sleep(time.Minute * 1)
+				}
 
 				err = upl.Upload()
 				if err == nil {
