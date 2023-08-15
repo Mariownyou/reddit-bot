@@ -11,9 +11,9 @@ import (
 )
 
 func PostHandler(m *Manager, u tgbotapi.Update) {
-	caption := u.Message.Caption
-	if c := u.Message.Text; c != "" {
-		caption = c
+	caption := m.Data.caption
+	if caption == "" {
+		caption = u.Message.Caption
 	}
 
 	// remove #offtweet
@@ -224,6 +224,7 @@ func (m *Manager) Construct() {
 	m.Handle(OnText, AnyState, func(m *Manager, u tgbotapi.Update) {
 		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video with caption")
 		m.Send(msg)
+		m.Data.caption = u.Message.Text
 	})
 }
 
