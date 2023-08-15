@@ -8,6 +8,7 @@ type Context struct {
 	preview   []byte
 	filetype  string
 	albumSubs []string
+	tweet     bool
 }
 
 func NewContext() Context {
