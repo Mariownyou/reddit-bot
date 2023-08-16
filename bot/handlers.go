@@ -210,6 +210,11 @@ func (m *Manager) Construct() {
 	m.Handle("/flairs", DefaultState, FlairsHandler)
 	m.Handle("/imgur", DefaultState, ImgurUploadHandler)
 	m.Handle("/drive", DefaultState, DriveUplaodHandler)
+	m.Handle("/copy", DefaultState, func(m *Manager, u tgbotapi.Update) {
+		t := u.Message.Text
+		t = strings.ReplaceAll(t, "/copy ", "")
+		m.Data.caption = t
+	})
 
 	// Submit post states
 	m.Handle(OnPhoto, DefaultState, PostHandler)
@@ -224,7 +229,6 @@ func (m *Manager) Construct() {
 	m.Handle(OnText, AnyState, func(m *Manager, u tgbotapi.Update) {
 		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video with caption")
 		m.Send(msg)
-		m.Data.caption = u.Message.Text
 	})
 }
 

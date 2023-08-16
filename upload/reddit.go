@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"time"
+	"sort"
 
 	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
 	"github.com/mariownyou/reddit-bot/config"
@@ -20,9 +21,18 @@ import (
 
 type Progress map[string]string
 
+// We need to sort map because golang does not save order of map keys and values, like for example Python
 func (p Progress) String() string {
 	var str string
-	for k, v := range p {
+
+	keys := make([]string, 0, len(p))
+    for k := range p {
+        keys = append(keys, k)
+    }
+    sort.Strings(keys)
+
+	for _, k := range keys {
+		v := p[k]
 		str += fmt.Sprintf("%s: %s\n", k, v)
 	}
 	return str
@@ -191,6 +201,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 					time.Sleep(time.Minute * 1)
 				}
 				time.Sleep(time.Minute * 1)
+				break
 
 				err = upl.Upload()
 				if err == nil {
