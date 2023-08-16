@@ -15,5 +15,6 @@ func NewContext() Context {
 	return Context{
 		flairs: map[string]string{},
 		subs:   []string{},
+		twee:   true,
 	}
 }
