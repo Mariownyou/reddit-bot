@@ -149,6 +149,14 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string) {
 	}
 
 	uploadLease := content.Args
+	if uploadLease.Action == "" {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			panic(fmt.Errorf("ERROR: Could not read response body: %s\n", err))
+		}
+		panic(fmt.Errorf("ERROR: Could not get action url: %s\n", string(b)))
+	}
+
 	uploadURL := "https:" + uploadLease.Action
 	uploadData := map[string]string{}
 
