@@ -109,6 +109,7 @@ func (u *RedditUploader) ConvertToGif() {
 
 func (u *RedditUploader) Upload() error {
 	if u.isVideo {
+		os.Remove("preview.jpg")
 		previewPath, err := GetPreviewFile(u.mediaPath)
 		if err != nil {
 			panic(err)
