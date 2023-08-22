@@ -17,6 +17,6 @@ func NewContext() Context {
 		flairs: map[string]string{},
 		subs: []string{},
 		tweet: true,
-		externalSrv: false,
+		externalSrv: true,
 	}
 }
