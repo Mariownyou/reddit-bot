@@ -201,7 +201,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 					time.Sleep(time.Minute * 1)
 				}
 				time.Sleep(time.Minute * 1)
-				break
+				// break
 
 				err = upl.Upload()
 				if err == nil {
@@ -212,7 +212,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 		}
 
 		out <- redditUploader.Error(err, "Could not submit post: " + p.Subreddit)
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Second * 1) // possible need to wait here
 	}
 
 	os.Remove(name)
