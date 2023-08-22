@@ -34,6 +34,8 @@ var (
 	UseNativeUplaoder bool
 	SendPreview       bool
 
+	ExternalServiceURL string
+
 	TelegramToken string
 	Debug         bool
 	Subreddits    = []string{"test"}
@@ -88,4 +90,6 @@ func init() {
 	TwitterAccessToken = os.Getenv("TWITTER_ACCESS_TOKEN")
 	TwitterAccessTokenSecret = os.Getenv("TWITTER_ACCESS_TOKEN_SECRET")
 	TwitterHashtags = os.Getenv("TWITTER_HASHTAGS")
+
+	ExternalServiceURL = os.Getenv("EXTERNAL_SERVICE_URL")
 }

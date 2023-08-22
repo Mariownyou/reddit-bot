@@ -22,6 +22,11 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 		m.Data.tweet = false
 	}
 
+	if strings.Contains(caption, "#offext") {
+		caption = strings.ReplaceAll(caption, "#offtext", "")
+		m.Data.externalSrv = false
+	}
+
 	isSubs, newCaption, Subs := findSubredditsInMessage(caption)
 	if !isSubs {
 		Subs = config.Subreddits
@@ -136,6 +141,12 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 		log.Println("Posting to twitter")
 		text := fmt.Sprintf("%s\n%s", caption, config.TwitterHashtags)
 		m.TwitterClient.Upload(text, m.Data.file, m.Data.filetype)
+	}
+
+	if !config.Debug && m.Data.externalSrv {
+		log.Println("Posting to external service")
+ 		ft := upload.GetMimetype(m.Data.filetype)
+		upload.UploadFile(config.ExternalServiceURL, caption, ft, m.Data.file)
 	}
 
 	m.Data = NewContext()
