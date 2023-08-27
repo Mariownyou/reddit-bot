@@ -76,6 +76,7 @@ type RedditUploader struct {
 	media     []byte
 	filetype  string
 	isVideo   bool
+	isGIF     bool
 }
 
 func NewRedditUploader(srv *reddit_uploader.Uploader, post reddit_uploader.Submission, mediaPath string, media []byte, filetype string, isVideo bool) *RedditUploader {
@@ -108,7 +109,7 @@ func (u *RedditUploader) ConvertToGif() {
 }
 
 func (u *RedditUploader) Upload() error {
-	if u.isVideo {
+	if u.isVideo || (!u.isGIF && u.filetype == "gif.mp4") {
 		os.Remove("preview.jpg")
 		previewPath, err := GetPreviewFile(u.mediaPath)
 		if err != nil {
@@ -119,7 +120,7 @@ func (u *RedditUploader) Upload() error {
 
 	path := u.mediaPath
 
-	if u.filetype == "gif.mp4" {
+	if u.filetype == "gif.mp4" && u.isGIF {
 		os.Remove("gif.gif")
 		u.ConvertToGif()
 		path = "gif.gif"
@@ -172,6 +173,21 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 		media:     file,
 		filetype:  filetype,
 		isVideo:   filetype == "video.mp4",
+		isGIF:     false,
+	}
+
+	uploaders := []Uploader{redditUploader}
+	if filetype == "gif.mp4" {
+		u := &RedditUploader{
+			srv:       c.Uploader,
+			post:      p,
+			mediaPath: name,
+			media:     file,
+			filetype:  filetype,
+			isVideo:   filetype == "video.mp4",
+			isGIF:     true,
+		}
+		uploaders = append(uploaders, u)
 	}
 
 	// imgurUploader := &ImgurUploader{
@@ -181,7 +197,6 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	// 	filename: filetype,
 	// }
 
-	uploaders := []Uploader{redditUploader}
 	for _, upl := range uploaders {
 		err := upl.Upload()
 		if err == nil {
