@@ -15,9 +15,12 @@ import (
 	"sort"
 
 	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
+	"github.com/mariownyou/reddit-bot/logger"
 	"github.com/mariownyou/reddit-bot/config"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
+
+var mylog = logger.New()
 
 type Progress map[string]string
 
@@ -268,6 +271,8 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 		submitChan := make(chan string)
 
 		params := c.NewSubmission(caption, sub, flair)
+
+		mylog.Logf("Post Info:", params, len(file), filetype, imgurLink)
 		go c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {
