@@ -10,6 +10,10 @@ const (
 	AwaitFlairMessageState
 	SubmitPostState
 	AwaitSendState
+	TwitterAskState
+	TwitterSendState
+	ExtAskState
+	ExtSendState
 
 	OnText ContentType = iota
 	OnPhoto

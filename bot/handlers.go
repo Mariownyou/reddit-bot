@@ -128,30 +128,86 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	msgObj, _ := m.Send(msg)
 	mID := msgObj.MessageID
 
-	go m.Client.SubmitPosts(out, flairs, caption, m.Data.file, m.Data.filetype)
+	if !config.Debug {
+		go m.Client.SubmitPosts(out, flairs, caption, m.Data.file, m.Data.filetype)
 
-	for text := range out {
-		text += fmt.Sprintf("Title: %s\n", caption)
-		editMsg := tgbotapi.NewEditMessageText(u.Message.Chat.ID, mID, text)
+		for text := range out {
+			text += fmt.Sprintf("Title: %s\n", caption)
+			editMsg := tgbotapi.NewEditMessageText(u.Message.Chat.ID, mID, text)
 
-		m.Send(editMsg)
+			m.Send(editMsg)
+		}
 	}
 
-	if !config.Debug && m.Data.tweet {
+	return TwitterAskState
+}
+
+const (
+	YesOption = "Yes"
+	NoOption  = "No"
+)
+
+func TwiterSendHandler(m *Manager, u  tgbotapi.Update) {
+	text := u.Message.Text
+
+	if text == YesOption {
+		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "OK")
+		m.Send(msg)
+
 		log.Println("Posting to twitter")
-		text := fmt.Sprintf("%s\n%s", caption, config.TwitterHashtags)
+		text := fmt.Sprintf("%s\n%s", m.Data.caption, config.TwitterHashtags)
 		m.TwitterClient.Upload(text, m.Data.file, m.Data.filetype)
 	}
 
-	if !config.Debug && m.Data.externalSrv {
+	m.SetState(ExtAskState)
+}
+
+func TwiterAskBind(m *Manager, u  tgbotapi.Update) State {
+	buttons := [][]tgbotapi.KeyboardButton{
+		[]tgbotapi.KeyboardButton{
+			tgbotapi.NewKeyboardButton(YesOption),
+			tgbotapi.NewKeyboardButton(NoOption),
+		},
+	}
+	keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
+
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Do you want to send this post to twitter?")
+	msg.ReplyMarkup = keyboard
+	m.Send(msg)
+
+	return TwitterSendState
+}
+
+func ExtSendHandler(m *Manager, u  tgbotapi.Update) {
+	text := u.Message.Text
+
+	if text == YesOption {
+		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "OK")
+		m.Send(msg)
+
 		log.Println("Posting to external service")
  		ft := upload.GetMimetype(m.Data.filetype)
-		upload.UploadFile(config.ExternalServiceURL, caption, ft, m.Data.file)
+		upload.UploadFile(config.ExternalServiceURL, m.Data.caption, ft, m.Data.file)
 	}
 
 	m.Data = NewContext()
+	m.SetState(DefaultState)
+}
 
-	return DefaultState
+func ExtAskBind(m *Manager, u  tgbotapi.Update) State {
+	buttons := [][]tgbotapi.KeyboardButton{
+		[]tgbotapi.KeyboardButton{
+			tgbotapi.NewKeyboardButton(YesOption),
+			tgbotapi.NewKeyboardButton(NoOption),
+		},
+	}
+	keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
+
+	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Do you want to send this post to f?")
+	msg.ReplyMarkup = keyboard
+	m.Send(msg)
+
+	return ExtSendState
 }
 
 func DriveUplaodHandler(m *Manager, u tgbotapi.Update) {
@@ -235,6 +291,12 @@ func (m *Manager) Construct() {
 	m.Handle(OnText, AwaitFlairMessageState, AwaitFlairMessageBind)
 	m.Bind(CreateFlairMessageState, CreateFlairMessageBind)
 	m.Bind(SubmitPostState, SubmitPostBind)
+
+	m.Handle(OnText, TwitterSendState, TwiterSendHandler)
+	m.Bind(TwitterAskState, TwiterAskBind)
+
+	m.Handle(OnText, ExtSendState, ExtSendHandler)
+	m.Bind(ExtAskState, ExtAskBind)
 
 	// Helpers
 	m.Handle(OnText, AnyState, func(m *Manager, u tgbotapi.Update) {
