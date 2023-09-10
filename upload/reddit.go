@@ -20,8 +20,6 @@ import (
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
 
-var mylog = logger.New()
-
 type Progress map[string]string
 
 // We need to sort map because golang does not save order of map keys and values, like for example Python
@@ -208,12 +206,12 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 		}
 
 		if strings.Contains(err.Error(), "Could not get action url") {
-			mylog.Logf("Trying again to get action url in 3 seconds", err)
+			logger.Logf("Trying again to get action url in 3 seconds", err)
 			time.Sleep(time.Second * 3)
 
 			err = upl.Upload()
 			if err != nil {
-				mylog.Logf("Could not get action url", err)
+				logger.Logf("Could not get action url", err)
 			}
 		}
 
@@ -282,7 +280,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 
 		params := c.NewSubmission(caption, sub, flair)
 
-		mylog.Logf("Post Info:", params, len(file), filetype, imgurLink)
+		logger.Logf("Post Info:", params, len(file), filetype, imgurLink)
 		go c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {

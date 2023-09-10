@@ -34,7 +34,7 @@ func createLogger() *MyLogger {
 // Logf logs a message along with the calling function's name.
 func (ml *MyLogger) Logf(format string, args ...interface{}) {
 	// Get the function name of the caller
-	pc, _, _, _ := runtime.Caller(1)
+	pc, _, _, _ := runtime.Caller(2)
 	callerFunc := runtime.FuncForPC(pc).Name()
 
 	// // Extract only the function name (without package)
@@ -45,4 +45,9 @@ func (ml *MyLogger) Logf(format string, args ...interface{}) {
 	// Format and log the message
 	message := fmt.Sprintf("[%s] %s", funcName, format)
 	ml.logger.Printf(message, args...)
+}
+
+func Logf(format string, args ...interface{}) {
+	log := New()
+	log.Logf(format, args)
 }
