@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"runtime"
-	"strings"
+	// "strings"
 	"sync"
 )
 
@@ -37,9 +37,10 @@ func (ml *MyLogger) Logf(format string, args ...interface{}) {
 	pc, _, _, _ := runtime.Caller(1)
 	callerFunc := runtime.FuncForPC(pc).Name()
 
-	// Extract only the function name (without package)
-	parts := strings.Split(callerFunc, ".")
-	funcName := parts[len(parts)-1]
+	// // Extract only the function name (without package)
+	// parts := strings.Split(callerFunc, ".")
+	// funcName := parts[len(parts)-1]
+	funcName := callerFunc
 
 	// Format and log the message
 	message := fmt.Sprintf("[%s] %s", funcName, format)
