@@ -207,6 +207,16 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 			break
 		}
 
+		if strings.Contains(err.Error(), "Could not get action url") {
+			mylog.Logf("Trying again to get action url in 3 seconds", err)
+			time.Sleep(time.Second * 3)
+
+			err = upl.Upload()
+			if err != nil {
+				mylog.Logf("Could not get action url", err)
+			}
+		}
+
 		// simple load balancer
 		if strings.Contains(err.Error(), "Take a break for") {
 			re := regexp.MustCompile(`(\d+)`)
