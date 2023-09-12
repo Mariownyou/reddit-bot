@@ -43,14 +43,51 @@ type Media struct {
 	MediaIDs []string `json:"media_ids"`
 }
 
+type Reply struct {
+	ID   string `json:"in_reply_to_tweet_id"`
+}
+
 type Tweet struct {
 	Text  string `json:"text"`
 	Media *Media `json:"media,omitempty"`
+	Reply *Reply `json:"reply,omitempty"`
+}
+
+type TweetResponse struct {
+	Data struct {
+		ID string `json:"id"`
+	} `json:"data"`
 }
 
 func (u *Uploader) Downlaod() {} // TODO
 
-func (u *Uploader) Upload(text string, file []byte, filename string) {
+func (u *Uploader) UploadText(text string, replyID string) string {
+	path := "https://api.twitter.com/2/tweets"
+
+	// https://developer.twitter.com/en/docs/twitter-api/data-dictionary/example-payloads
+	tweet := Tweet{
+		Text:  text,
+	}
+
+	if replyID != "" {
+		tweet.Reply = &Reply{ID: replyID}
+	}
+
+	payload, _ := json.Marshal(tweet)
+	reader := bytes.NewReader(payload)
+	resp, _ := u.Client.Post(path, "application/json", reader)
+	defer resp.Body.Close()
+
+	var r TweetResponse
+	err := json.NewDecoder(resp.Body).Decode(&r)
+	if err != nil {
+		panic(err)
+	}
+
+	return r.Data.ID
+}
+
+func (u *Uploader) Upload(text string, file []byte, filename string) string {
 	path := "https://api.twitter.com/2/tweets"
 
 	t := types[filepath.Ext(filename)]
@@ -61,6 +98,7 @@ func (u *Uploader) Upload(text string, file []byte, filename string) {
 		mediaID = u.uploadVideo(file, filename)
 	}
 
+	// https://developer.twitter.com/en/docs/twitter-api/tweets/manage-tweets/api-reference/post-tweets
 	tweet := Tweet{
 		Text:  text,
 		Media: &Media{MediaIDs: []string{mediaID}},
@@ -70,8 +108,14 @@ func (u *Uploader) Upload(text string, file []byte, filename string) {
 	reader := bytes.NewReader(payload)
 	resp, _ := u.Client.Post(path, "application/json", reader)
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	fmt.Printf("Raw Response Body:\n%v\n", string(body))
+
+	var r TweetResponse
+	err := json.NewDecoder(resp.Body).Decode(&r)
+	if err != nil {
+		panic(err)
+	}
+
+	return r.Data.ID
 }
 
 func (u *Uploader) uploadImage(file []byte, filename string) string {

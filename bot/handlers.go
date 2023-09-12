@@ -156,7 +156,8 @@ func TwiterSendHandler(m *Manager, u  tgbotapi.Update) {
 
 		log.Println("Posting to twitter")
 		text := fmt.Sprintf("%s\n%s", m.Data.caption, config.TwitterHashtags)
-		m.TwitterClient.Upload(text, m.Data.file, m.Data.filetype)
+		id := m.TwitterClient.Upload(text, m.Data.file, m.Data.filetype)
+		m.TwitterClient.UploadText(config.TwitterReplyText, id)
 	}
 
 	m.SetState(ExtAskState)

@@ -30,6 +30,7 @@ var (
 	TwitterAccessToken       string
 	TwitterAccessTokenSecret string
 	TwitterHashtags          string
+	TwitterReplyText         string
 
 	UseNativeUplaoder bool
 	SendPreview       bool
@@ -90,6 +91,7 @@ func init() {
 	TwitterAccessToken = os.Getenv("TWITTER_ACCESS_TOKEN")
 	TwitterAccessTokenSecret = os.Getenv("TWITTER_ACCESS_TOKEN_SECRET")
 	TwitterHashtags = os.Getenv("TWITTER_HASHTAGS")
+	TwitterReplyText = os.Getenv("TWITTER_REPLY_TEXT")
 
 	ExternalServiceURL = os.Getenv("EXTERNAL_SERVICE_URL")
 }
