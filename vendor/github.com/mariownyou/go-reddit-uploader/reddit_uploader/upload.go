@@ -65,7 +65,10 @@ func (u *Uploader) GetAccessToken() (string, error) {
 }
 
 func (u *Uploader) SubmitImage(params Submission, imagePath string) error {
-	imageURL, _ := u.UploadMedia(imagePath)
+	imageURL, _, err := u.UploadMedia(imagePath)
+	if err != nil {
+		return err
+	}
 
 	post := struct {
 		Submission
@@ -77,8 +80,11 @@ func (u *Uploader) SubmitImage(params Submission, imagePath string) error {
 }
 
 func (u *Uploader) SubmitVideo(params Submission, videoPath, previewPath string) error {
-	videoURL, _ := u.UploadMedia(videoPath)
-	previewURL, _ := u.UploadMedia(previewPath)
+	videoURL, _, err := u.UploadMedia(videoPath)
+	previewURL, _, err := u.UploadMedia(previewPath)
+	if err != nil {
+		return err
+	}
 
 	post := struct {
 		Submission
@@ -122,7 +128,7 @@ func (u *Uploader) Post(url string, data io.Reader, auth ...bool) *http.Response
 	return resp
 }
 
-func (u *Uploader) UploadMedia(mediaPath string) (string, string) {
+func (u *Uploader) UploadMedia(mediaPath string) (string, string, error) {
 	split := strings.Split(mediaPath, ".")
 	if len(split) < 2 {
 		panic(fmt.Errorf("ERROR: Filepath does not contain any extension\n"))
@@ -150,11 +156,7 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string) {
 
 	uploadLease := content.Args
 	if uploadLease.Action == "" {
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			panic(fmt.Errorf("ERROR: Could not read response body: %s\n", err))
-		}
-		panic(fmt.Errorf("ERROR: Could not get action url: %s\n", string(b)))
+		return "", "", fmt.Errorf("ERROR: Could not get action url")
 	}
 
 	uploadURL := "https:" + uploadLease.Action
@@ -173,7 +175,7 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string) {
 	}
 
 	mediaURL := fmt.Sprintf("%s/%s", uploadURL, uploadData["key"])
-	return mediaURL, content.Asset.WebsocketURL
+	return mediaURL, content.Asset.WebsocketURL, nil
 }
 
 func (u *Uploader) SubmitMedia(post interface{}) error {
