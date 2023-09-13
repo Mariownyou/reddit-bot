@@ -93,12 +93,12 @@ func NewRedditUploader(srv *reddit_uploader.Uploader, post reddit_uploader.Submi
 
 func (u *RedditUploader) Success(resp string) string {
 	log.Println("Post submitted successfully using reddit native api", u.post.Subreddit)
-	return "Post submitted successfully ✅"
+	return "✅"
 }
 
 func (u *RedditUploader) Error(err error, resp string) string {
 	log.Println("Error submitting post using reddit native api", u.post.Subreddit, resp, err)
-	return fmt.Sprintf("Error submitting post using reddit native api ❌: %s: %s", err, resp)
+	return fmt.Sprintf("❌: %s: %s", err, resp)
 }
 
 func (u *RedditUploader) ConvertToGif() {
@@ -224,7 +224,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 				out <- redditUploader.Error(err, fmt.Sprintf("will repeat in %d minutes", mins))
 
 				for i:=1; i<=mins; i++ {
-					out <- fmt.Sprintf("🕣 Waiting to send post again in %d minutes", mins-i)
+					out <- fmt.Sprintf("🕣 %d minutes", mins-i)
 					time.Sleep(time.Minute * 1)
 				}
 				time.Sleep(time.Minute * 1)
