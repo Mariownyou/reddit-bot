@@ -148,15 +148,20 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string, error) {
 
 	defer resp.Body.Close()
 
+	data, err := io.ReadAll(resp.Body) // TODO move to main package and maybe we could use nopcloser and not read all initially
+	if err != nil {
+		panic(fmt.Errorf("ERROR: Could not ReadAll resp Body: %s\n", err))
+	}
+
 	var content UploadMediaResponse
-	err := json.NewDecoder(resp.Body).Decode(&content)
+	err = json.NewDecoder(bytes.NewReader(data)).Decode(&content)
 	if err != nil {
 		panic(fmt.Errorf("ERROR: Could not unmarshal response: %s\n", err))
 	}
 
 	uploadLease := content.Args
 	if uploadLease.Action == "" {
-		return "", "", fmt.Errorf("ERROR: Could not get action url")
+		return "", "", fmt.Errorf("ERROR: Could not get action url: %s", data)
 	}
 
 	uploadURL := "https:" + uploadLease.Action
