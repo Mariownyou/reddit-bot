@@ -129,6 +129,7 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	mID := msgObj.MessageID
 
 	if !config.Debug {
+		m.RefreshRedditClient()
 		go m.Client.SubmitPosts(out, flairs, caption, m.Data.file, m.Data.filetype)
 
 		for text := range out {

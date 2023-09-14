@@ -201,7 +201,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 	for _, upl := range uploaders {
 		err := upl.Upload()
 		if err == nil {
-			out <- redditUploader.Success("uploaded")
+			out <- upl.Success("uploaded")
 			break
 		}
 
@@ -221,7 +221,7 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 			m := re.FindAllString(err.Error(), -1)
 			if len(m) > 0 {
 				mins, _ := strconv.Atoi(m[0])
-				out <- redditUploader.Error(err, fmt.Sprintf("will repeat in %d minutes", mins))
+				out <- upl.Error(err, fmt.Sprintf("will repeat in %d minutes", mins))
 
 				for i:=1; i<=mins; i++ {
 					out <- fmt.Sprintf("🕣 %d minutes", mins-i)
@@ -232,13 +232,13 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 
 				err = upl.Upload()
 				if err == nil {
-					out <- redditUploader.Success("uploaded")
+					out <- upl.Success("uploaded")
 					break
 				}
 			}
 		}
 
-		out <- redditUploader.Error(err, "Could not submit post: " + p.Subreddit)
+		out <- upl.Error(err, "Could not submit post: " + p.Subreddit)
 		time.Sleep(time.Second * 1) // possible need to wait here
 	}
 
