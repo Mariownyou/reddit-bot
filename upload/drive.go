@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"mime"
 	"path/filepath"
 	"time"
 
 	"github.com/mariownyou/go-drive-uploader/drive_uploader"
 	"github.com/mariownyou/reddit-bot/config"
+	"github.com/mariownyou/reddit-bot/logger"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 )
@@ -100,7 +100,7 @@ func DriveShareFile(file []byte, filename string) string {
 	uploader, _ := drive_uploader.New(config.DriveCredentials)
 	link, fileID, err := uploader.ShareFile(file, filename)
 	if err != nil {
-		log.Println(err)
+		logger.Red(err.Error())
 		return ""
 	}
 
@@ -117,10 +117,10 @@ func DriveDelete(fileID string, mins int) {
 		uploader, _ := drive_uploader.New(config.DriveCredentials)
 		err := uploader.Delete(fileID)
 		if err != nil {
-			fmt.Printf("Failed to delete file: %s\n", fileID)
+			logger.Red("Failed to delete file: %s\n", fileID)
 			return
 		}
 
-		fmt.Printf("Deleted file: %s\n", fileID)
+		logger.Green("Deleted file: %s\n", fileID)
 	}()
 }

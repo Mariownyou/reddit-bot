@@ -2,12 +2,12 @@ package bot
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/mariownyou/reddit-bot/config"
 	"github.com/mariownyou/reddit-bot/upload"
+	"github.com/mariownyou/reddit-bot/logger"
 )
 
 func PostHandler(m *Manager, u tgbotapi.Update) {
@@ -91,7 +91,6 @@ func CreateFlairMessageBind(m *Manager, u tgbotapi.Update) State {
 		m.Data.flairs = flairsMap
 
 		if len(m.Data.subs) == 0 {
-			log.Println("map", m.Data.flairs)
 			text := fmt.Sprintf("No flairs found for sub %s, posting without flair", sub)
 
 			msg := tgbotapi.NewMessage(u.Message.Chat.ID, text)
@@ -155,7 +154,7 @@ func TwiterSendHandler(m *Manager, u  tgbotapi.Update) {
 		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "OK")
 		m.Send(msg)
 
-		log.Println("Posting to twitter")
+		logger.Yellow("Posting to twitter")
 		text := fmt.Sprintf("%s\n%s", m.Data.caption, config.TwitterHashtags)
 		id := m.TwitterClient.Upload(text, m.Data.file, m.Data.filetype)
 		m.TwitterClient.UploadText(config.TwitterReplyText, id)
@@ -187,7 +186,7 @@ func ExtSendHandler(m *Manager, u  tgbotapi.Update) {
 		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "OK")
 		m.Send(msg)
 
-		log.Println("Posting to external service")
+		logger.Yellow("Posting to external service")
  		ft := upload.GetMimetype(m.Data.filetype)
 		upload.UploadFile(config.ExternalServiceURL, m.Data.caption, ft, m.Data.file)
 	}
@@ -268,14 +267,7 @@ func FlairsHandler(m *Manager, u tgbotapi.Update) {
 	m.Send(msg)
 }
 
-func UploadAlbumHandler(m *Manager, u tgbotapi.Update) {
-	// check that the message contains more than one photo
-
-	log.Println("Photos Len:", len(u.Message.Photo))
-}
-
 func (m *Manager) Construct() {
-	m.Handle("/album", DefaultState, UploadAlbumHandler)
 	m.Handle("/flairs", DefaultState, FlairsHandler)
 	m.Handle("/imgur", DefaultState, ImgurUploadHandler)
 	m.Handle("/drive", DefaultState, DriveUplaodHandler)

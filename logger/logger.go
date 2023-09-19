@@ -8,7 +8,16 @@ import (
 	"sync"
 )
 
-// MyLogger represents the custom logger.
+var ResetColor  = "\033[0m"
+var RedColor    = "\033[31m"
+var GreenColor  = "\033[32m"
+var YellowColor = "\033[33m"
+var BlueColor   = "\033[34m"
+var PurpleColor = "\033[35m"
+var CyanColor   = "\033[36m"
+var GrayColor   = "\033[37m"
+var WhiteColor  = "\033[97m"
+
 type MyLogger struct {
 	logger *log.Logger
 }
@@ -18,7 +27,6 @@ var (
 	singleton *MyLogger
 )
 
-// New creates a new instance of MyLogger.
 func New() *MyLogger {
 	once.Do(func() {
 		singleton = createLogger()
@@ -32,22 +40,28 @@ func createLogger() *MyLogger {
 }
 
 // Logf logs a message along with the calling function's name.
-func (ml *MyLogger) Logf(format string, args ...interface{}) {
-	// Get the function name of the caller
-	pc, _, _, _ := runtime.Caller(2)
+func (ml *MyLogger) Logf(color string, format string, args ...interface{}) {
+	pc, _, _, _ := runtime.Caller(2)  // @TODO remove all logs without purpose, or make them info logs
 	callerFunc := runtime.FuncForPC(pc).Name()
 
-	// Extract only the function name (without package)
 	parts := strings.Split(callerFunc, "/")
 	funcName := parts[len(parts)-1]
-	// funcName := callerFunc
 
-	// Format and log the message
-	message := fmt.Sprintf("[%s] %s", funcName, format)
+	message := fmt.Sprintf("%s[%s]%s %s", color, funcName, ResetColor, format)
 	ml.logger.Printf(message, args...)
 }
 
-func Logf(format string, args ...interface{}) {
+func Green(format string, args ...interface{}) {
 	log := New()
-	log.Logf(format, args)
+	log.Logf(GreenColor, format, args)
+}
+
+func Yellow(format string, args ...interface{}) {
+	log := New()
+	log.Logf(YellowColor, format, args)
+}
+
+func Red(format string, args ...interface{}) {
+	log := New()
+	log.Logf(RedColor, format, args)
 }

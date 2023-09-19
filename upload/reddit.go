@@ -151,11 +151,12 @@ func (u *ImgurUploader) Error(err error, resp string) string {
 }
 
 func (u *ImgurUploader) Upload() error {
-	fmt.Printf("Uploading to imgur: %s\n", u.filename)
+	logger.Green("Uploading to imgur: %s\n", u.filename)
 	link := ImgurUpload(u.media, u.filename)
 	return u.srv.SubmitLink(u.post, link)
 }
 
+// @TODO reduce complexity and code repetition
 func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, file []byte, filetype, imgurLink string) {
 	defer close(out)
 
@@ -206,12 +207,28 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 		}
 
 		if strings.Contains(err.Error(), "Could not get action url") {
-			logger.Logf("Trying again to get action url in 3 seconds", err)
+			logger.Green("Trying again to get action url in 3 seconds", err)
 			time.Sleep(time.Second * 3)
 
 			err = upl.Upload()
 			if err != nil {
-				logger.Logf("Could not get action url", err)
+				logger.Red("Could not get action url", err)
+				out <- "🥲 Could not get action url"
+				return
+			}
+		}
+
+		if strings.Contains(err.Error(), "token has expired") {
+			logger.Green("Token expired, refreshing token", err)
+
+			time.Sleep(time.Second * 3)
+			redditUploader.srv.RefreshAccessToken()
+
+			err = upl.Upload()
+			if err != nil {
+				logger.Red("Token expired", err)
+				out <- "🥲 Token expired"
+				return
 			}
 		}
 
@@ -280,7 +297,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 
 		params := c.NewSubmission(caption, sub, flair)
 
-		logger.Logf("Post Info:", params, len(file), filetype, imgurLink)
+		logger.Green("Post Info:", params, len(file), filetype, imgurLink)
 		go c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {
@@ -337,7 +354,7 @@ func (c *RedditClient) GetPreviewFile(video []byte) ([]byte, error) {
 func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	flairs, _, err := c.Client.Flair.GetPostFlairs(c.Ctx, subreddit)
 	if err != nil {
-		fmt.Printf("Error getting flairs for subreddit: %s -- %s\n", subreddit, err)
+		logger.Red("Error getting flairs for subreddit: %s -- %s\n", subreddit, err)
 		return []*reddit.Flair{}
 	}
 

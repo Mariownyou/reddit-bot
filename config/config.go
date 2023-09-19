@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	EnvFile = ".env.local"
-	// EnvFile          = ".env"
+	// EnvFile = ".env.local"
+	EnvFile          = ".env"
 	DriveDeleteAfter = 180
 )
 

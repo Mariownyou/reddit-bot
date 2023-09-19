@@ -64,6 +64,16 @@ func (u *Uploader) GetAccessToken() (string, error) {
 	return content.Token, nil
 }
 
+func (u *Uploader) RefreshAccessToken() error {
+	t, err := u.GetAccessToken()
+	if err != nil {
+		return err
+	}
+
+	u.token = t
+	return nil
+}
+
 func (u *Uploader) SubmitImage(params Submission, imagePath string) error {
 	imageURL, _, err := u.UploadMedia(imagePath)
 	if err != nil {
@@ -148,7 +158,7 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string, error) {
 
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(resp.Body) // TODO move to main package and maybe we could use nopcloser and not read all initially
+	data, err := io.ReadAll(resp.Body) // @TODO move to main package and maybe we could use nopcloser and not read all initially
 	if err != nil {
 		panic(fmt.Errorf("ERROR: Could not ReadAll resp Body: %s\n", err))
 	}
@@ -176,7 +186,7 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string, error) {
 
 	if resp.StatusCode != 201 {
 		content, _ := io.ReadAll(resp.Body)
-		panic(fmt.Errorf("ERROR: Could not post meida: %s", string(content)))
+		return "", "", fmt.Errorf("ERROR: Could not post meida: %s\ndata: %s\n", string(content), uploadLease)
 	}
 
 	mediaURL := fmt.Sprintf("%s/%s", uploadURL, uploadData["key"])
