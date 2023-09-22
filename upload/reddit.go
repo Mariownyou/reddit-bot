@@ -211,11 +211,13 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 			time.Sleep(time.Second * 3)
 
 			err = upl.Upload()
-			if err != nil {
-				logger.Red("Could not get action url", err)
-				out <- "🥲 Could not get action url"
-				return
+			if err == nil {
+				break
 			}
+
+			logger.Red("Could not get action url", err)
+			out <- "🥲 Could not get action url"
+			return
 		}
 
 		if strings.Contains(err.Error(), "token has expired") {
@@ -225,11 +227,13 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 			redditUploader.srv.RefreshAccessToken()
 
 			err = upl.Upload()
-			if err != nil {
-				logger.Red("Token expired", err)
-				out <- "🥲 Token expired"
-				return
+			if err == nil {
+				break
 			}
+
+			logger.Red("Token expired", err)
+			out <- "🥲 Token expired"
+			return
 		}
 
 		// simple load balancer
