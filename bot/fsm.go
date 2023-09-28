@@ -1,8 +1,8 @@
 package bot
 
 import (
-	"encoding/json"
 	"strings"
+	"encoding/json"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -30,29 +30,22 @@ func or(strings ...string) string {
 
 func (h HandlerInfo) isValid(update tgbotapi.Update, state State) bool {
 	checkState := h.state == state || h.state == AnyState
-	checkMessage := update.Message != nil
-
 	switch filter := h.filter.(type) {
 	case string:
-		var msg string
-		if update.Message != nil {
-			msg = or(update.Message.Text, update.Message.Caption)
-		}
+		msg := or(update.Message.Text, update.Message.Caption)
 		return checkState && (strings.HasPrefix(msg, (h.filter).(string)) || h.filter == "*")
 	case ContentType:
 		switch filter {
 		case OnText:
-			return checkState && checkMessage && update.Message.Text != ""
+			return checkState && update.Message.Text != ""
 		case OnPhoto:
-			return checkState && checkMessage && update.Message.Photo != nil
+			return checkState && update.Message.Photo != nil
 		case OnVideo:
-			return checkState && checkMessage && update.Message.Video != nil
+			return checkState && update.Message.Video != nil
 		case OnAnimation:
-			return checkState && checkMessage && update.Message.Animation != nil
+			return checkState && update.Message.Animation != nil
 		case OnMediaGroup:
-			return checkState && checkMessage && update.Message.MediaGroupID != ""
-		case OnCallbackQuery:
-			return checkState && update.CallbackQuery != nil
+			return checkState && update.Message.MediaGroupID != ""
 		}
 	}
 

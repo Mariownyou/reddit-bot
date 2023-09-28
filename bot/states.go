@@ -20,7 +20,6 @@ const (
 	OnVideo
 	OnAnimation
 	OnMediaGroup
-	OnCallbackQuery
 )
 
 type State int

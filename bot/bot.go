@@ -73,17 +73,17 @@ func NewFlairMessage(flairs []*reddit.Flair, subreddit string, chatID int64) tgb
 	return msg
 }
 
-func (bot *Bot) GetFileURL(m *tgbotapi.Message) string {
+func (bot *Bot) GetFileURL(u tgbotapi.Update) string {
 	var fileID string
 
-	if m.Photo != nil {
-		fileID = m.Photo[len(m.Photo)-1].FileID
+	if u.Message.Photo != nil {
+		fileID = u.Message.Photo[len(u.Message.Photo)-1].FileID
 	}
-	if m.Video != nil {
-		fileID = m.Video.FileID
+	if u.Message.Video != nil {
+		fileID = u.Message.Video.FileID
 	}
-	if m.Animation != nil {
-		fileID = m.Animation.FileID
+	if u.Message.Animation != nil {
+		fileID = u.Message.Animation.FileID
 	}
 
 	url, err := bot.GetFileDirectURL(fileID)
