@@ -29,6 +29,8 @@ func (m *Manager) PreparePost(msg *tgbotapi.Message) {
 		caption = msg.Caption
 	}
 
+	caption = strings.ReplaceAll(caption, "#post", "")
+
 	// remove #offtweet
 	if strings.Contains(caption, "#offtweet") {
 		caption = strings.ReplaceAll(caption, "#offtweet", "")
