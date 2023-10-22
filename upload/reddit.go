@@ -98,7 +98,7 @@ func (u *RedditUploader) Success(resp string) string {
 
 func (u *RedditUploader) Error(err error, resp string) string {
 	log.Println("Error submitting post using reddit native api", u.post.Subreddit, resp, err)
-	return fmt.Sprintf("❌: %s: %s", err, resp)
+	return fmt.Sprintf("❌, %s, %s", err, resp)
 }
 
 func (u *RedditUploader) ConvertToGif() {
@@ -305,7 +305,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 		go c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {
-			progress[sub] = msg
+			progress[sub] = fmt.Sprintf("%s, %s", sub, msg)
 			out <- Progress(progress).String()
 		}
 

@@ -2,18 +2,31 @@ package bot
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/mariownyou/reddit-bot/config"
-	"github.com/mariownyou/reddit-bot/upload"
 	"github.com/mariownyou/reddit-bot/logger"
+	"github.com/mariownyou/reddit-bot/upload"
 )
 
-func PostHandler(m *Manager, u tgbotapi.Update) {
+func GetChatID(u tgbotapi.Update) int64 {
+	if u.Message != nil {
+		return u.Message.Chat.ID
+	}
+
+	if u.CallbackQuery != nil {
+		return u.CallbackQuery.Message.Chat.ID
+	}
+
+	return 0
+}
+
+func (m *Manager) PreparePost(msg *tgbotapi.Message) {
 	caption := m.Data.caption
 	if caption == "" {
-		caption = u.Message.Caption
+		caption = msg.Caption
 	}
 
 	// remove #offtweet
@@ -34,17 +47,17 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 		caption = strings.TrimSpace(newCaption)
 	}
 
-	fileURL := m.GetFileURL(u)
+	fileURL := m.GetFileURL(msg)
 	file := upload.DownloadFile(fileURL)
 
 	var filetype string
 
 	switch {
-	case u.Message.Photo != nil:
+	case msg.Photo != nil:
 		filetype = "image.jpg"
-	case u.Message.Video != nil:
+	case msg.Video != nil:
 		filetype = "video.mp4"
-	case u.Message.Animation != nil:
+	case msg.Animation != nil:
 		filetype = "gif.mp4"
 	}
 
@@ -52,6 +65,29 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 	m.Data.filetype = filetype
 	m.Data.caption = caption
 	m.Data.subs = Subs
+}
+
+func (m *Manager) ParsePost(msg string) {
+	for _, line := range strings.Split(msg, "\n") {
+		pattern := `(?P<sub>\w+): (?P<flair>\w+), (?P<msg>.+)`
+		re := regexp.MustCompile(pattern)
+		match := re.FindStringSubmatch(line)
+
+		if len(match) == 0 {
+			logger.Yellow("No matches found, skiping line: %s", line)
+			continue
+		}
+
+		sub := match[1]
+		flair := match[2]
+
+		m.Data.flairs[sub] = flair
+	}
+}
+
+func PostHandler(m *Manager, u tgbotapi.Update) {
+	m.PreparePost(u.Message)
+	m.Data.replyToMsg = u.Message.MessageID
 
 	m.SetState(CreateFlairMessageState)
 }
@@ -111,33 +147,71 @@ func CreateFlairMessageBind(m *Manager, u tgbotapi.Update) State {
 	return AwaitFlairMessageState
 }
 
+func PostCallbackHandler(m *Manager, u tgbotapi.Update) {
+	switch u.CallbackQuery.Data {
+	case "repost":
+		// get msg by id
+		// id := u.CallbackQuery.Message.ReplyToMessage
+		m.PreparePost(u.CallbackQuery.Message.ReplyToMessage)
+		m.Data.replyToMsg = u.CallbackQuery.Message.ReplyToMessage.MessageID
+		m.ParsePost(u.CallbackQuery.Message.Text)
+		m.SetState(SubmitPostState)
+		// fmt.Println("message photo", id.Photo)
+		return
+		// fmt.Println(u.CallbackQuery.Message.ReplyToMessage)
+	default:
+		return
+	}
+
+	fmt.Println("from callback handler", u.CallbackQuery.Data, u.CallbackQuery.Message)
+}
+
 func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	var text string
-	out := make(chan string)
 	flairs := m.Data.flairs
 	caption := m.Data.caption
 
+	text = fmt.Sprintf("Title: %s\n", caption) // @TODO add #post and #repost for better navigation
 	for sub, flair := range m.Data.flairs {
-		text += fmt.Sprintf("%s - %s awaiting...\n", sub, flair)
+		text += fmt.Sprintf("%s: %s, awaiting...\n", sub, flair)
 	}
 
-	text += fmt.Sprintf("Title: %s\n", caption)
+	// callback := tgbotapi.NewInlineKeyboardMarkup(
+	// 	tgbotapi.NewInlineKeyboardRow(
+	// 		tgbotapi.NewInlineKeyboardButtonData("Cancel", "cancel"), // @TODO add Post button
+	// 	),
+	// )
 
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Posting content to the following subreddits with flairs:\n"+text)
+	msg := tgbotapi.NewMessage(GetChatID(u), text)
+	// msg.ReplyMarkup = callback
+	msg.ReplyToMessageID = m.Data.replyToMsg // @TODO cleanup after using
+
 	msgObj, _ := m.Send(msg)
 	mID := msgObj.MessageID
 
 	if !config.Debug {
+		out := make(chan string)
+
 		m.RefreshRedditClient()
 		go m.Client.SubmitPosts(out, flairs, caption, m.Data.file, m.Data.filetype)
 
-		for text := range out {
-			text += fmt.Sprintf("Title: %s\n", caption)
-			editMsg := tgbotapi.NewEditMessageText(u.Message.Chat.ID, mID, text)
+		for text = range out {
+			text = fmt.Sprintf("Title: %s\n%s", caption, text)
+			editMsg := tgbotapi.NewEditMessageText(GetChatID(u), mID, text)
 
 			m.Send(editMsg)
 		}
 	}
+
+	callback := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Repost", "repost"),
+		),
+	)
+
+	editMsg := tgbotapi.NewEditMessageText(GetChatID(u), mID, text)
+	editMsg.ReplyMarkup = &callback
+	m.Send(editMsg)
 
 	return TwitterAskState
 }
@@ -147,7 +221,7 @@ const (
 	NoOption  = "No"
 )
 
-func TwiterSendHandler(m *Manager, u  tgbotapi.Update) {
+func TwiterSendHandler(m *Manager, u tgbotapi.Update) {
 	text := u.Message.Text
 
 	if text == YesOption {
@@ -163,7 +237,7 @@ func TwiterSendHandler(m *Manager, u  tgbotapi.Update) {
 	m.SetState(ExtAskState)
 }
 
-func TwiterAskBind(m *Manager, u  tgbotapi.Update) State {
+func TwiterAskBind(m *Manager, u tgbotapi.Update) State {
 	buttons := [][]tgbotapi.KeyboardButton{
 		[]tgbotapi.KeyboardButton{
 			tgbotapi.NewKeyboardButton(YesOption),
@@ -172,22 +246,22 @@ func TwiterAskBind(m *Manager, u  tgbotapi.Update) State {
 	}
 	keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
 
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Do you want to send this post to twitter?")
+	msg := tgbotapi.NewMessage(GetChatID(u), "Do you want to send this post to twitter?")
 	msg.ReplyMarkup = keyboard
 	m.Send(msg)
 
 	return TwitterSendState
 }
 
-func ExtSendHandler(m *Manager, u  tgbotapi.Update) {
+func ExtSendHandler(m *Manager, u tgbotapi.Update) {
 	text := u.Message.Text
 
 	if text == YesOption {
-		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "OK")
+		msg := tgbotapi.NewMessage(GetChatID(u), "OK")
 		m.Send(msg)
 
 		logger.Yellow("Posting to external service")
- 		ft := upload.GetMimetype(m.Data.filetype)
+		ft := upload.GetMimetype(m.Data.filetype)
 		upload.UploadFile(config.ExternalServiceURL, m.Data.caption, ft, m.Data.file)
 	}
 
@@ -195,7 +269,7 @@ func ExtSendHandler(m *Manager, u  tgbotapi.Update) {
 	m.SetState(DefaultState)
 }
 
-func ExtAskBind(m *Manager, u  tgbotapi.Update) State {
+func ExtAskBind(m *Manager, u tgbotapi.Update) State {
 	buttons := [][]tgbotapi.KeyboardButton{
 		[]tgbotapi.KeyboardButton{
 			tgbotapi.NewKeyboardButton(YesOption),
@@ -204,7 +278,7 @@ func ExtAskBind(m *Manager, u  tgbotapi.Update) State {
 	}
 	keyboard := tgbotapi.NewOneTimeReplyKeyboard(buttons...)
 
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Do you want to send this post to f?")
+	msg := tgbotapi.NewMessage(GetChatID(u), "Do you want to send this post to f?")
 	msg.ReplyMarkup = keyboard
 	m.Send(msg)
 
@@ -213,27 +287,27 @@ func ExtAskBind(m *Manager, u  tgbotapi.Update) State {
 
 func DriveUplaodHandler(m *Manager, u tgbotapi.Update) {
 	if u.Message.Photo == nil && u.Message.Video == nil {
-		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video")
+		msg := tgbotapi.NewMessage(GetChatID(u), "Please send a photo or video")
 		m.Send(msg)
 		return
 	}
 
-	file := upload.DownloadFile(m.GetFileURL(u))
+	file := upload.DownloadFile(m.GetFileURL(u.Message))
 	link := upload.DriveShareFile(file, u.Message.Caption)
 
 	text := fmt.Sprintf("File will be deleted in %d minutes: %s", config.DriveDeleteAfter, link)
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, text)
+	msg := tgbotapi.NewMessage(GetChatID(u), text)
 	m.Send(msg)
 }
 
 func ImgurUploadHandler(m *Manager, u tgbotapi.Update) {
 	if u.Message.Photo == nil && u.Message.Video == nil {
-		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video")
+		msg := tgbotapi.NewMessage(GetChatID(u), "Please send a photo or video")
 		m.Send(msg)
 		return
 	}
 
-	file := upload.DownloadFile(m.GetFileURL(u))
+	file := upload.DownloadFile(m.GetFileURL(u.Message))
 	var filetype string
 
 	switch {
@@ -244,14 +318,14 @@ func ImgurUploadHandler(m *Manager, u tgbotapi.Update) {
 	}
 
 	link := upload.ImgurUpload(file, filetype)
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, link)
+	msg := tgbotapi.NewMessage(GetChatID(u), link)
 	m.Send(msg)
 }
 
 func FlairsHandler(m *Manager, u tgbotapi.Update) {
 	words := strings.Split(u.Message.Text, " ")
 	if len(words) < 2 {
-		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please provide a subreddit")
+		msg := tgbotapi.NewMessage(GetChatID(u), "Please provide a subreddit")
 		m.Send(msg)
 		return
 	}
@@ -263,7 +337,7 @@ func FlairsHandler(m *Manager, u tgbotapi.Update) {
 		text += fmt.Sprintf("%s -- %s\n", flair.Text, flair.ID)
 	}
 
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, text)
+	msg := tgbotapi.NewMessage(GetChatID(u), text)
 	m.Send(msg)
 }
 
@@ -283,6 +357,7 @@ func (m *Manager) Construct() {
 	m.Handle(OnAnimation, DefaultState, PostHandler)
 
 	m.Handle(OnText, AwaitFlairMessageState, AwaitFlairMessageBind)
+	m.Handle(OnCallbackQuery, AnyState, PostCallbackHandler)
 	m.Bind(CreateFlairMessageState, CreateFlairMessageBind)
 	m.Bind(SubmitPostState, SubmitPostBind)
 
@@ -294,7 +369,7 @@ func (m *Manager) Construct() {
 
 	// Helpers
 	m.Handle(OnText, AnyState, func(m *Manager, u tgbotapi.Update) {
-		msg := tgbotapi.NewMessage(u.Message.Chat.ID, "Please send a photo or video with caption")
+		msg := tgbotapi.NewMessage(GetChatID(u), "Please send a photo or video with caption")
 		m.Send(msg)
 	})
 }
@@ -304,7 +379,7 @@ func AuthMiddleware(m *Manager, u tgbotapi.Update, p processFunc) processFunc {
 		return p
 	}
 
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, "You are not authorized to use this bot")
+	msg := tgbotapi.NewMessage(GetChatID(u), "You are not authorized to use this bot")
 	m.Send(msg)
 	return nil
 }

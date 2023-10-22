@@ -10,13 +10,15 @@ type Context struct {
 	albumSubs   []string
 	tweet       bool
 	externalSrv bool
+	replyToMsg  int
 }
 
 func NewContext() Context {
 	return Context{
-		flairs: map[string]string{},
-		subs: []string{},
-		tweet: true,
+		flairs:      map[string]string{},
+		subs:        []string{},
+		tweet:       true,
 		externalSrv: true,
+		replyToMsg:  0,
 	}
 }
