@@ -45,6 +45,8 @@ func (bot *Bot) RefreshRedditClient() {
 func findSubredditsInMessage(message string) (bool, string, []string) {
 	subreddits := []string{}
 
+	message = strings.ReplaceAll(message, "\n", " ")
+
 	for _, word := range strings.Split(message, " ") {
 		if strings.HasPrefix(word, "@") {
 			message = strings.Replace(message, word, "", 1)
@@ -53,7 +55,7 @@ func findSubredditsInMessage(message string) (bool, string, []string) {
 	}
 
 	if len(subreddits) > 0 {
-		return true, message, subreddits
+		return true, strings.TrimSpace(message), subreddits
 	}
 	return false, message, subreddits
 }
