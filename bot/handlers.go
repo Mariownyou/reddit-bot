@@ -27,11 +27,9 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 		m.Data.externalSrv = false
 	}
 
-	isSubs, newCaption, Subs := findSubredditsInMessage(caption)
-	if !isSubs {
+	found, newCaption, Subs := findSubredditsInMessage(caption)
+	if !found {
 		Subs = config.Subreddits
-	} else {
-		caption = strings.TrimSpace(newCaption)
 	}
 
 	fileURL := m.GetFileURL(u)
