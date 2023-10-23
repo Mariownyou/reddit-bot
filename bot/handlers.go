@@ -30,6 +30,8 @@ func PostHandler(m *Manager, u tgbotapi.Update) {
 	found, newCaption, Subs := findSubredditsInMessage(caption)
 	if !found {
 		Subs = config.Subreddits
+	} else {
+		caption = newCaption
 	}
 
 	fileURL := m.GetFileURL(u)
