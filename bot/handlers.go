@@ -45,6 +45,8 @@ func (m *Manager) PreparePost(msg *tgbotapi.Message) {
 	found, newCaption, Subs := findSubredditsInMessage(caption)
 	if !found {
 		Subs = config.Subreddits
+	} else {
+		caption = newCaption
 	}
 
 	fileURL := m.GetFileURL(msg)
