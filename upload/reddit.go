@@ -305,7 +305,7 @@ func (c *RedditClient) SubmitPosts(out chan string, flairs map[string]string, ca
 		go c.Submit(submitChan, params, file, filetype, imgurLink)
 
 		for msg := range submitChan {
-			progress[sub] = fmt.Sprintf("%s, %s", sub, msg)
+			progress[sub] = fmt.Sprintf("%s, %s", flair, msg)
 			out <- Progress(progress).String()
 		}
 
