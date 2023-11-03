@@ -133,6 +133,7 @@ func (u *Uploader) Post(url string, data io.Reader, auth ...bool) *http.Response
 	resp, err := client.Do(req)
 	if err != nil {
 		if strings.Contains(err.Error(), "timeout") {
+			fmt.Println("trying to repost, error:", err.Error())
 			return u.Post(url, data, auth...)
 		}
 		panic(fmt.Errorf("ERROR: could not perform a request: %s\n", err))

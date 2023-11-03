@@ -71,7 +71,7 @@ func (m *Manager) PreparePost(msg *tgbotapi.Message) {
 
 func (m *Manager) ParsePost(msg string) {
 	for _, line := range strings.Split(msg, "\n") {
-		pattern := `(?P<sub>\w+): (?P<flair>\w+), (?P<msg>.+)`
+		pattern := `(?P<sub>\w+): (.*), (?P<msg>.+)`
 		re := regexp.MustCompile(pattern)
 		match := re.FindStringSubmatch(line)
 
