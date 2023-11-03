@@ -184,9 +184,15 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	// 	),
 	// )
 
+	callback := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Repost", "repost"),
+		),
+	)
 	msg := tgbotapi.NewMessage(GetChatID(u), text)
-	// msg.ReplyMarkup = callback
+	msg.ReplyMarkup = &callback
 	msg.ReplyToMessageID = m.Data.replyToMsg // @TODO cleanup after using
+
 
 	msgObj, _ := m.Send(msg)
 	mID := msgObj.MessageID
@@ -204,12 +210,6 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 			m.Send(editMsg)
 		}
 	}
-
-	callback := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Repost", "repost"),
-		),
-	)
 
 	editMsg := tgbotapi.NewEditMessageText(GetChatID(u), mID, text)
 	editMsg.ReplyMarkup = &callback

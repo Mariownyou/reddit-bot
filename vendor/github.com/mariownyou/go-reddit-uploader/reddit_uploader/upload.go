@@ -43,7 +43,10 @@ func (u *Uploader) GetAccessToken() (string, error) {
 	form.Add("username", u.username)
 	form.Add("password", u.password)
 
-	resp := u.Post("https://www.reddit.com/api/v1/access_token", strings.NewReader(form.Encode()), true)
+	resp, err := u.Post("https://www.reddit.com/api/v1/access_token", strings.NewReader(form.Encode()), true)
+	if err != nil {
+		return "", err
+	}
 	defer resp.Body.Close()
 
 	type TokenResponse struct {
@@ -52,7 +55,7 @@ func (u *Uploader) GetAccessToken() (string, error) {
 	}
 
 	var content TokenResponse
-	err := json.NewDecoder(resp.Body).Decode(&content)
+	err = json.NewDecoder(resp.Body).Decode(&content)
 	if err != nil {
 		return "", fmt.Errorf("ERROR: Could not unmarshal response: %s\n", err)
 	}
@@ -116,7 +119,7 @@ func (u *Uploader) SubmitLink(params Submission, link string) error {
 	return u.SubmitMedia(post)
 }
 
-func (u *Uploader) Post(url string, data io.Reader, auth ...bool) *http.Response {
+func (u *Uploader) Post(url string, data io.Reader, auth ...bool) (*http.Response, error) {
 	req, err := http.NewRequest("POST", url, data)
 	if err != nil {
 		panic(fmt.Errorf("ERROR: Could not create a request object: %s\n", err))
@@ -133,13 +136,12 @@ func (u *Uploader) Post(url string, data io.Reader, auth ...bool) *http.Response
 	resp, err := client.Do(req)
 	if err != nil {
 		if strings.Contains(err.Error(), "timeout") {
-			fmt.Println("trying to repost, error:", err.Error())
-			return u.Post(url, data, auth...)
+			return nil, err
 		}
 		panic(fmt.Errorf("ERROR: could not perform a request: %s\n", err))
 	}
 
-	return resp
+	return resp, nil
 }
 
 func (u *Uploader) UploadMedia(mediaPath string) (string, string, error) {
@@ -158,7 +160,10 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string, error) {
 	form.Add("filepath", mediaPath)
 	form.Add("mimetype", mimetype)
 
-	resp := u.Post("https://oauth.reddit.com/api/media/asset.json", strings.NewReader(form.Encode()))
+	resp, err := u.Post("https://oauth.reddit.com/api/media/asset.json", strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", "", err
+	}
 
 	defer resp.Body.Close()
 
@@ -205,7 +210,10 @@ func (u *Uploader) SubmitMedia(post interface{}) error {
 
 	form.Add("api_type", "json")
 
-	resp := u.Post("https://oauth.reddit.com/api/submit", strings.NewReader(form.Encode()))
+	resp, err := u.Post("https://oauth.reddit.com/api/submit", strings.NewReader(form.Encode()))
+	if err != nil {
+		return err
+	}
 	defer resp.Body.Close()
 
 	return ParseErrors(resp)
