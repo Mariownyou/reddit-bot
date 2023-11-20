@@ -162,6 +162,11 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 
 	log.Println("Submitting post", p, filetype)
 
+	if config.Debug {
+		out <- "❌ Debug mode, post not submitted"
+		return
+	}
+
 	name := getRandomName() + filetype
 	os.Remove(name)
 	os.Remove("preview.jpg")
@@ -274,7 +279,7 @@ func GetPreviewFile(filename string) (string, error) {
 		return "", err
 	}
 
-	return "preview.jpg", nil
+	return PreviewFilename, nil
 }
 
 func check(e error) {
@@ -358,11 +363,26 @@ func (c *RedditClient) GetPreviewFile(video []byte) ([]byte, error) {
 func (c *RedditClient) GetPostFlairs(subreddit string) []*reddit.Flair {
 	flairs, _, err := c.Client.Flair.GetPostFlairs(c.Ctx, subreddit)
 	if err != nil {
-		logger.Red("Error getting flairs for subreddit: %s -- %s\n", subreddit, err)
+		// logger.Red("Error getting flairs for subreddit: %s -- %s\n", subreddit, err)
 		return []*reddit.Flair{}
 	}
 
 	return flairs
+}
+
+func GetFlairID(sub, flair string) string {
+	client := NewRedditClient()
+	return client.GetFlairID(sub, flair)
+}
+
+func (c *RedditClient) GetFlairID(sub, flair string) string {
+	flairs := c.GetPostFlairs(sub)
+	for _, f := range flairs {
+		if f.Text == flair {
+			return f.ID
+		}
+	}
+	return ""
 }
 
 func getRandomName() string {

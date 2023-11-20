@@ -325,7 +325,7 @@ func ParseErrors(r *http.Response) error {
 	}
 
 	if len(content.JSON.Errors) > 0 {
-		return fmt.Errorf("ERROR: Could not submit media: %s\n", content.JSON.Errors[0][1])
+		return fmt.Errorf("ERROR: Could not submit media: %v\n", content.JSON.Errors)
 	}
 
 	if content.Message != "" {

@@ -2,7 +2,6 @@ package bot
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -21,70 +20,6 @@ func GetChatID(u tgbotapi.Update) int64 {
 	}
 
 	return 0
-}
-
-func (m *Manager) PreparePost(msg *tgbotapi.Message) {
-	caption := m.Data.caption
-	if caption == "" {
-		caption = msg.Caption
-	}
-
-	caption = strings.ReplaceAll(caption, "#post", "")
-
-	// remove #offtweet
-	if strings.Contains(caption, "#offtweet") {
-		caption = strings.ReplaceAll(caption, "#offtweet", "")
-		m.Data.tweet = false
-	}
-
-	if strings.Contains(caption, "#offext") {
-		caption = strings.ReplaceAll(caption, "#offtext", "")
-		m.Data.externalSrv = false
-	}
-
-	found, newCaption, Subs := findSubredditsInMessage(caption)
-	if !found {
-		Subs = config.Subreddits
-	} else {
-		caption = newCaption
-	}
-
-	fileURL := m.GetFileURL(msg)
-	file := upload.DownloadFile(fileURL)
-
-	var filetype string
-
-	switch {
-	case msg.Photo != nil:
-		filetype = "image.jpg"
-	case msg.Video != nil:
-		filetype = "video.mp4"
-	case msg.Animation != nil:
-		filetype = "gif.mp4"
-	}
-
-	m.Data.file = file
-	m.Data.filetype = filetype
-	m.Data.caption = caption
-	m.Data.subs = Subs
-}
-
-func (m *Manager) ParsePost(msg string) {
-	for _, line := range strings.Split(msg, "\n") {
-		pattern := `(?P<sub>\w+): (.*), (?P<msg>.+)`
-		re := regexp.MustCompile(pattern)
-		match := re.FindStringSubmatch(line)
-
-		if len(match) == 0 {
-			logger.Yellow("No matches found, skiping line: %s", line)
-			continue
-		}
-
-		sub := match[1]
-		flair := match[2]
-
-		m.Data.flairs[sub] = flair
-	}
 }
 
 func PostHandler(m *Manager, u tgbotapi.Update) {
@@ -149,25 +84,6 @@ func CreateFlairMessageBind(m *Manager, u tgbotapi.Update) State {
 	return AwaitFlairMessageState
 }
 
-func PostCallbackHandler(m *Manager, u tgbotapi.Update) {
-	switch u.CallbackQuery.Data {
-	case "repost":
-		// get msg by id
-		// id := u.CallbackQuery.Message.ReplyToMessage
-		m.PreparePost(u.CallbackQuery.Message.ReplyToMessage)
-		m.Data.replyToMsg = u.CallbackQuery.Message.ReplyToMessage.MessageID
-		m.ParsePost(u.CallbackQuery.Message.Text)
-		m.SetState(SubmitPostState)
-		// fmt.Println("message photo", id.Photo)
-		return
-		// fmt.Println(u.CallbackQuery.Message.ReplyToMessage)
-	default:
-		return
-	}
-
-	fmt.Println("from callback handler", u.CallbackQuery.Data, u.CallbackQuery.Message)
-}
-
 func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	var text string
 	flairs := m.Data.flairs
@@ -184,9 +100,18 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	// 	),
 	// )
 
+	callbackData := CallbackData{
+		Action:     "repost",
+	}
+	data, err := callbackData.ToJson()
+	if err != nil {
+		logger.Red("Error while creating callback data: %s", err)
+		panic(err)
+	}
+
 	callback := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Repost", "repost"),
+			tgbotapi.NewInlineKeyboardButtonData("Repost", data),
 		),
 	)
 	msg := tgbotapi.NewMessage(GetChatID(u), text)
@@ -197,20 +122,47 @@ func SubmitPostBind(m *Manager, u tgbotapi.Update) State {
 	msgObj, _ := m.Send(msg)
 	mID := msgObj.MessageID
 
-	if !config.Debug {
-		out := make(chan string)
+	out := make(chan string)
 
-		m.RefreshRedditClient()
-		go m.Client.SubmitPosts(out, flairs, caption, m.Data.file, m.Data.filetype)
+	m.RefreshRedditClient()
+	go m.Client.SubmitPosts(out, flairs, caption, m.Data.file, m.Data.filetype)
 
-		for text = range out {
-			text = fmt.Sprintf("Title: %s\n%s", caption, text)
-			editMsg := tgbotapi.NewEditMessageText(GetChatID(u), mID, text)
+	for text = range out {
+		text = fmt.Sprintf("Title: %s\n%s", caption, text)
+		editMsg := tgbotapi.NewEditMessageText(GetChatID(u), mID, text)
 
-			m.Send(editMsg)
+		m.Send(editMsg)
+	}
+
+	rows := [][]tgbotapi.InlineKeyboardButton{}
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Repost", data),
+	))
+
+	failed := m.ParseFailedPost(text)
+	if len(failed) > 0 {
+		for _, f := range failed {
+			callbackData := CallbackData{
+				Action:     "repost-sub",
+				Sub:        f[0],
+				Flair:      f[1],
+			}
+			data, err := callbackData.ToJson()
+			if err != nil {
+				logger.Red("Error while creating callback data: %s", err)
+				panic(err)
+			}
+
+			m := fmt.Sprintf("repost: %s - %s", f[0], f[1])
+			rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(m, data),
+			))
+			// @TODO edit message when repost is done
+			// @TODO make button to resume posting on accident fail
 		}
 	}
 
+	callback = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	editMsg := tgbotapi.NewEditMessageText(GetChatID(u), mID, text)
 	editMsg.ReplyMarkup = &callback
 	m.Send(editMsg)
