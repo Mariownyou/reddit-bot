@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/mariownyou/reddit-bot/upload"
-	"github.com/mariownyou/reddit-bot/logger"
 	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -83,10 +82,6 @@ func NewRepost(bot *Bot, update tgbotapi.Update) *Post {
 
 	subs := ParseRepostMessage(update.CallbackQuery.Message.Text, update.CallbackQuery.Message.Entities)
 	post.Subs = subs
-
-	logger.Red(update.CallbackQuery.Message.Text, update.CallbackQuery.Message.Entities)
-
-	logger.Green("Repost:", post, subs)
 
 	post.Tag = "\n\\#repost"
 	return post
@@ -246,7 +241,6 @@ func ParseRepostMessage(text string, styles []tgbotapi.MessageEntity) map[string
 			subs[sub] = ""
 		}
 	}
-	logger.Yellow("Subs:", subs)
 	return subs
 }
 

@@ -44,7 +44,3 @@ func TestParsePostMessage(t *testing.T) {
 		}
 	}
 }
-
-func TestParseRepostMessage(t *testing.T) {
-
-}

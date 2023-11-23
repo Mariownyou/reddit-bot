@@ -7,7 +7,6 @@ import (
 
 	"github.com/mariownyou/reddit-bot/config"
 	"github.com/mariownyou/reddit-bot/upload"
-	"github.com/mariownyou/reddit-bot/logger"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -197,12 +196,13 @@ func (b *Bot) handleStateFlairConfirm(update tgbotapi.Update) {
 func (b *Bot) handleStatePostSending(update tgbotapi.Update) {
 	post := b.GetPost(update)
 	chatID := b.GetChatID(update)
-	logger.Green("Sending post to", chatID)
+
 	m, buttons := post.NewStatusMessage(nil)
 	msg := tgbotapi.NewMessage(chatID, m)
 	msg.ReplyToMessageID = b.GetSession(update).replyID
 	markup := tgbotapi.NewInlineKeyboardMarkup(buttons...)
 	msg.ReplyMarkup = &markup
+
 	msgInfo, _ := b.Send(msg)
 	msgID := msgInfo.MessageID
 

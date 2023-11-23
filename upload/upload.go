@@ -115,7 +115,7 @@ func deleteFile(n string) {
 }
 
 func CleanString(s string) string {
-	// @TODO remove newlines in package
+	// @TODO remove newlines in package, not here
 	s = strings.Replace(s, "\n", " ", -1)
 	s = strings.TrimSpace(s)
 	return s
