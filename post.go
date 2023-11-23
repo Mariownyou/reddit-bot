@@ -18,7 +18,13 @@ const (
 	NoFlair  = ""
 )
 
+type RepostInfo struct {
+	Sub string
+	Flair string
+}
+
 type Post struct {
+	repostCh chan RepostInfo
 	cancel   context.CancelFunc
 	Title    string
 	Subs     map[string]string
@@ -84,10 +90,13 @@ func NewRepost(bot *Bot, update tgbotapi.Update) *Post {
 func (p *Post) Submit() chan map[string]upload.SubmitStatus {
 	status := make(chan map[string]upload.SubmitStatus)
 	ctx, cancel := context.WithCancel(context.Background())
+	repostCh := make(chan RepostInfo)
 	p.cancel = cancel
+	p.repostCh = repostCh
 
 	go func() {
 		defer close(status)
+		defer close(repostCh)
 
 		m := make(map[string]upload.SubmitStatus)
 		for sub, flair := range p.Subs {
@@ -95,11 +104,16 @@ func (p *Post) Submit() chan map[string]upload.SubmitStatus {
 			case <-ctx.Done():
 				// @TODO send status, remove
 				return
-			default:
-				m[sub] = p.SubmitOne(sub, flair)
-				status <- m
+			case repost := <-repostCh:
+				m[repost.Sub] = p.SubmitOne(repost.Sub, repost.Flair)
 				time.Sleep(time.Second * 1)
+				logger.Green("Reposting:", repost)
+			default:
 			}
+
+			m[sub] = p.SubmitOne(sub, flair)
+			status <- m
+			time.Sleep(time.Second * 1)
 		}
 	}()
 	// @TODO try to post first time, if something fails, create buttons for each failed sub to retry
@@ -134,6 +148,17 @@ func (p *Post) Cancel() {
 	p.cancel()
 }
 
+func (p *Post) Repost(sub, flair string) bool {
+	select {
+	case p.repostCh <- RepostInfo{sub, flair}:
+		// The value was sent successfully.
+		return true
+	default:
+		// The send operation would block, so we assume the channel is closed.
+		return false
+	}
+}
+
 func (p *Post) NewStatusMessage(status map[string]upload.SubmitStatus) (string, [][]tgbotapi.InlineKeyboardButton) {
 	text := fmt.Sprintf("*%s*\n", EscapeString(p.Title))
 
@@ -148,15 +173,17 @@ func (p *Post) NewStatusMessage(status map[string]upload.SubmitStatus) (string, 
 	}
 
 	for sub, s := range status {
+		flair := p.Subs[sub]
 		text += fmt.Sprintf(
 			"[%s](%s): %s\n",
 			EscapeString(sub),
-			EscapeString("https://www.google.com/" + p.Subs[sub]),
+			EscapeString("https://www.google.com/" + flair),
 			EscapeString(TruncateString(s.Message)),
 		)
 		if !s.Success {
+			data := fmt.Sprintf("repost:%s:%s", sub, flair)
 			buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("repost: "+sub, sub),
+				tgbotapi.NewInlineKeyboardButtonData("repost: "+sub, data),
 			))
 		}
 	}
@@ -206,7 +233,8 @@ func ParseRepostMessage(text string, styles []tgbotapi.MessageEntity) map[string
 			continue
 		}
 
-		sub := text[style.Offset:style.Offset+style.Length]
+		unicodeText := []rune(text)
+		sub := string(unicodeText[style.Offset:style.Offset+style.Length])
 		splited := strings.Split(style.URL, "/")
 		if len(splited) == 3 {
 			subs[sub] = splited[2]
@@ -214,7 +242,30 @@ func ParseRepostMessage(text string, styles []tgbotapi.MessageEntity) map[string
 			subs[sub] = ""
 		}
 	}
+	logger.Yellow("Subs:", subs)
 	return subs
+}
+
+func ParsePostStatusMessage(text string, styles []tgbotapi.MessageEntity) map[string]upload.SubmitStatus {
+	status := make(map[string]upload.SubmitStatus)
+
+	for _, style := range styles {
+		if style.Type != "text_link" {
+			continue
+		}
+
+		sub := text[style.Offset:style.Offset+style.Length]
+		t := text[style.Offset+style.Length:] // @TODO unicode text
+		logger.Yellow("Text after link: %s", text[style.Offset:style.Offset+GetEndOfLine(t)+style.Length])
+
+		if strings.Contains(text[style.Offset:style.Offset+GetEndOfLine(t)+style.Length], "❌") {
+			status[sub] = upload.SubmitStatus{Success: false}
+		} else {
+			status[sub] = upload.SubmitStatus{Success: true}
+		}
+	}
+
+	return status
 }
 
 func GetMessageText(update tgbotapi.Update) (string, *tgbotapi.Message) {
@@ -245,4 +296,13 @@ func TruncateString(s string) string {
 
 func EscapeString(s string) string {
 	return tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, s)
+}
+
+func GetEndOfLine(text string) int {
+	for i, char := range text {
+		if char == '\n' {
+			return i
+		}
+	}
+	return len(text)
 }

@@ -133,8 +133,12 @@ func main() {
 					sub := args[0]
 					flair := args[1]
 
-					post := NewRepost(bot, update)
-					post.SubmitOne(sub, flair)
+					ok := bot.GetPost(update).Repost(sub, flair)
+					logger.Green("Repost:", ok)
+					if !ok {
+						status := ParsePostStatusMessage(update.CallbackQuery.Message.Text, update.CallbackQuery.Message.Entities)
+						logger.Red("Message status:", status)
+					}
 				}
 			}
 		}
