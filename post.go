@@ -16,6 +16,8 @@ import (
 const (
 	EmptySub = "None"
 	NoFlair  = ""
+
+	SubmitStatusWait = "Waiting..."
 )
 
 type RepostInfo struct {
@@ -30,6 +32,7 @@ type Post struct {
 	Subs     map[string]string
 	File     []byte
 	FileType string
+	Tag      string
 }
 
 func NewPost(bot *Bot, update tgbotapi.Update) *Post {
@@ -71,6 +74,7 @@ func NewPost(bot *Bot, update tgbotapi.Update) *Post {
 		Subs: subMap,
 		File: file,
 		FileType: filetype,
+		Tag:  "\n\\#post",
 	}
 }
 
@@ -84,30 +88,30 @@ func NewRepost(bot *Bot, update tgbotapi.Update) *Post {
 
 	logger.Green("Repost:", post, subs)
 
+	post.Tag = "\n\\#repost"
 	return post
 }
 
 func (p *Post) Submit() chan map[string]upload.SubmitStatus {
 	status := make(chan map[string]upload.SubmitStatus)
 	ctx, cancel := context.WithCancel(context.Background())
-	repostCh := make(chan RepostInfo)
 	p.cancel = cancel
-	p.repostCh = repostCh
 
 	go func() {
 		defer close(status)
-		defer close(repostCh)
+		// @TODO add sorting by sub
 
 		m := make(map[string]upload.SubmitStatus)
+		for sub := range p.Subs {
+			m[sub] = upload.SubmitStatus{Success: false, Message: SubmitStatusWait}
+		}
+		status <- m
+
 		for sub, flair := range p.Subs {
 			select {
 			case <-ctx.Done():
 				// @TODO send status, remove
 				return
-			case repost := <-repostCh:
-				m[repost.Sub] = p.SubmitOne(repost.Sub, repost.Flair)
-				time.Sleep(time.Second * 1)
-				logger.Green("Reposting:", repost)
 			default:
 			}
 
@@ -116,7 +120,6 @@ func (p *Post) Submit() chan map[string]upload.SubmitStatus {
 			time.Sleep(time.Second * 1)
 		}
 	}()
-	// @TODO try to post first time, if something fails, create buttons for each failed sub to retry
 
 	return status
 }
@@ -148,17 +151,6 @@ func (p *Post) Cancel() {
 	p.cancel()
 }
 
-func (p *Post) Repost(sub, flair string) bool {
-	select {
-	case p.repostCh <- RepostInfo{sub, flair}:
-		// The value was sent successfully.
-		return true
-	default:
-		// The send operation would block, so we assume the channel is closed.
-		return false
-	}
-}
-
 func (p *Post) NewStatusMessage(status map[string]upload.SubmitStatus) (string, [][]tgbotapi.InlineKeyboardButton) {
 	text := fmt.Sprintf("*%s*\n", EscapeString(p.Title))
 
@@ -172,8 +164,17 @@ func (p *Post) NewStatusMessage(status map[string]upload.SubmitStatus) (string, 
 		return "Please wait, upload in progress🥹", buttons
 	}
 
-	for sub, s := range status {
+	sorted := make([]string, 0, len(status))
+	for sub := range status {
+		sorted = append(sorted, sub)
+	}
+	sort.Strings(sorted)
+
+	hasFailed := false
+	for _, sub := range sorted {
 		flair := p.Subs[sub]
+		s := status[sub]
+
 		text += fmt.Sprintf(
 			"[%s](%s): %s\n",
 			EscapeString(sub),
@@ -181,11 +182,14 @@ func (p *Post) NewStatusMessage(status map[string]upload.SubmitStatus) (string, 
 			EscapeString(TruncateString(s.Message)),
 		)
 		if !s.Success {
-			data := fmt.Sprintf("repost:%s:%s", sub, flair)
-			buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("repost: "+sub, data),
-			))
+			hasFailed = true
 		}
+	}
+
+	if hasFailed {
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("repost failed", "repost-failed"),
+		))
 	}
 
 	return text, buttons
@@ -246,22 +250,22 @@ func ParseRepostMessage(text string, styles []tgbotapi.MessageEntity) map[string
 	return subs
 }
 
-func ParsePostStatusMessage(text string, styles []tgbotapi.MessageEntity) map[string]upload.SubmitStatus {
+func ParseFaieldSubs(text string, styles []tgbotapi.MessageEntity) map[string]upload.SubmitStatus {
 	status := make(map[string]upload.SubmitStatus)
+	t := []rune(text)
 
 	for _, style := range styles {
 		if style.Type != "text_link" {
 			continue
 		}
 
-		sub := text[style.Offset:style.Offset+style.Length]
-		t := text[style.Offset+style.Length:] // @TODO unicode text
-		logger.Yellow("Text after link: %s", text[style.Offset:style.Offset+GetEndOfLine(t)+style.Length])
+		start := style.Offset
+		sub := string(t[start:start+style.Length])
+		line := t[start:]
 
-		if strings.Contains(text[style.Offset:style.Offset+GetEndOfLine(t)+style.Length], "❌") {
+		check := string(t[start:start+GetEndOfLine(line)])
+		if strings.Contains(check, "❌") || strings.Contains(check, SubmitStatusWait) {
 			status[sub] = upload.SubmitStatus{Success: false}
-		} else {
-			status[sub] = upload.SubmitStatus{Success: true}
 		}
 	}
 
@@ -298,7 +302,7 @@ func EscapeString(s string) string {
 	return tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, s)
 }
 
-func GetEndOfLine(text string) int {
+func GetEndOfLine(text []rune) int {
 	for i, char := range text {
 		if char == '\n' {
 			return i

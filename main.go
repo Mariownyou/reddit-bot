@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"strings"
 	"context"
 
 	"github.com/mariownyou/reddit-bot/config"
@@ -119,27 +118,28 @@ func main() {
 		if update.CallbackQuery != nil {
 			switch update.CallbackQuery.Data {
 			case "repost":
+				// @TODO maybe we need to stop previous post process
 				session.replyID = update.CallbackQuery.Message.ReplyToMessage.MessageID
 				post := NewRepost(bot, update)
 				session.post = post
 				bot.SetState(update, StatePostSending)
 				go bot.handleStatePostSending(update)
+			case "repost-failed":
+				session.replyID = update.CallbackQuery.Message.ReplyToMessage.MessageID
+				post := NewRepost(bot, update)
+
+				failed := ParseFaieldSubs(update.CallbackQuery.Message.Text, update.CallbackQuery.Message.Entities)
+				subs := make(map[string]string)
+				for sub := range failed {
+					subs[sub] = post.Subs[sub]
+				}
+				post.Subs = subs
+				session.post = post
+
+				bot.SetState(update, StatePostSending)
+				go bot.handleStatePostSending(update)
 			case "cancel":
 				session.post.Cancel()
-			default:
-				if strings.HasPrefix(update.CallbackQuery.Data, "repost:") {
-					// @TODO
-					args := strings.Split(strings.TrimPrefix(update.CallbackQuery.Data, "repost:"), ":")
-					sub := args[0]
-					flair := args[1]
-
-					ok := bot.GetPost(update).Repost(sub, flair)
-					logger.Green("Repost:", ok)
-					if !ok {
-						status := ParsePostStatusMessage(update.CallbackQuery.Message.Text, update.CallbackQuery.Message.Entities)
-						logger.Red("Message status:", status)
-					}
-				}
 			}
 		}
 	}
@@ -229,7 +229,7 @@ func (b *Bot) handleStatePostSending(update tgbotapi.Update) {
 
 	markup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
 	updated.ReplyMarkup = &markup
-	updated.Text = m + "\n\\#post"
+	updated.Text = m + post.Tag
 	b.Send(updated)
 
 	b.SetState(update, StateDefault)
