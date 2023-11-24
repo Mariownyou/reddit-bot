@@ -143,6 +143,7 @@ func (p *Post) Cancel() {
 		return
 	}
 
+	p.Tag = ""
 	p.cancel()
 }
 
@@ -151,8 +152,8 @@ func (p *Post) NewStatusMessage(status map[string]upload.SubmitStatus) (string, 
 
 	buttons := make([][]tgbotapi.InlineKeyboardButton, 0)
 	buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("repost", "repost"),
-		tgbotapi.NewInlineKeyboardButtonData("cancel", "cancel"),
+		tgbotapi.NewInlineKeyboardButtonData("repost", CallbackRepost),
+		tgbotapi.NewInlineKeyboardButtonData("cancel", CallbackCancel),
 	))
 
 	if status == nil {
@@ -183,7 +184,7 @@ func (p *Post) NewStatusMessage(status map[string]upload.SubmitStatus) (string, 
 
 	if hasFailed {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("repost failed", "repost-failed"),
+			tgbotapi.NewInlineKeyboardButtonData("repost failed", CallbackRepostFailed),
 		))
 	}
 

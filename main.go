@@ -7,7 +7,16 @@ import (
 
 	"github.com/mariownyou/reddit-bot/config"
 	"github.com/mariownyou/reddit-bot/upload"
+	"github.com/mariownyou/go-twitter-uploader/twitter_uploader"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
+
+const (
+	CallbackRepost       = "repost"
+	CallbackCancel       = "cancel"
+	CallbackRepostFailed = "repost-failed"
+	CallbackTwitter      = "twitter"
+	CallbackFService     = "f-service"
 )
 
 type Session struct {
@@ -116,14 +125,14 @@ func main() {
 
 		if update.CallbackQuery != nil {
 			switch update.CallbackQuery.Data {
-			case "repost":
+			case CallbackRepost:
 				// @TODO maybe we need to stop previous post process
 				session.replyID = update.CallbackQuery.Message.ReplyToMessage.MessageID
 				post := NewRepost(bot, update)
 				session.post = post
 				bot.SetState(update, StatePostSending)
 				go bot.handleStatePostSending(update)
-			case "repost-failed":
+			case CallbackRepostFailed:
 				session.replyID = update.CallbackQuery.Message.ReplyToMessage.MessageID
 				post := NewRepost(bot, update)
 
@@ -137,8 +146,25 @@ func main() {
 
 				bot.SetState(update, StatePostSending)
 				go bot.handleStatePostSending(update)
-			case "cancel":
+			case CallbackCancel:
 				session.post.Cancel()
+			case CallbackFService:
+				post := NewRepost(bot, update)
+				mt := upload.GetMimetype(post.FileType)
+				upload.UploadFile(config.ExternalServiceURL, post.Title, mt, post.File)
+			case CallbackTwitter:
+				twitter := twitter_uploader.New(
+					config.TwitterConsumerKey,
+					config.TwitterConsumerSecret,
+					config.TwitterAccessToken,
+					config.TwitterAccessTokenSecret,
+				)
+				post := NewRepost(bot, update)
+				id := twitter.Upload(post.Title, post.File, post.FileType)
+				if id != "" {
+					twitter.UploadText(config.TwitterReplyText, id)
+				}
+				// @TODO update button status
 			}
 		}
 	}
@@ -223,8 +249,8 @@ func (b *Bot) handleStatePostSending(update tgbotapi.Update) {
 
 	m, buttons = post.NewStatusMessage(status)
 	buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("twitter", "twitter"),
-		tgbotapi.NewInlineKeyboardButtonData("f...", "f-service"),
+		tgbotapi.NewInlineKeyboardButtonData("twitter", CallbackTwitter),
+		tgbotapi.NewInlineKeyboardButtonData("f...", CallbackFService),
 	))
 
 	markup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
