@@ -329,7 +329,7 @@ func ParseErrors(r *http.Response) error {
 	}
 
 	if content.Message != "" {
-		return content.Message
+		return fmt.Errorf("%s", content.Message)
 	}
 
 	// fmt.Println("Response Submit Media", content.JSON.Data)
