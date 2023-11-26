@@ -57,11 +57,11 @@ func (u *Uploader) GetAccessToken() (string, error) {
 	var content TokenResponse
 	err = json.NewDecoder(resp.Body).Decode(&content)
 	if err != nil {
-		return "", fmt.Errorf("ERROR: Could not unmarshal response: %s\n", err)
+		return "", err
 	}
 
 	if content.Error != 0 {
-		return "", fmt.Errorf("ERROR: Could not get access token: %d\n", content.Error)
+		return "", fmt.Errorf("Could not get access token: %d\n", content.Error)
 	}
 
 	return content.Token, nil
@@ -180,7 +180,7 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string, error) {
 
 	uploadLease := content.Args
 	if uploadLease.Action == "" {
-		return "", "", fmt.Errorf("ERROR: Could not get action url: %s", data)
+		return "", "", fmt.Errorf("Could not get action url: %s", data)
 	}
 
 	uploadURL := "https:" + uploadLease.Action
@@ -195,7 +195,7 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string, error) {
 
 	if resp.StatusCode != 201 {
 		content, _ := io.ReadAll(resp.Body)
-		return "", "", fmt.Errorf("ERROR: Could not post meida: %s\ndata: %s\n", string(content), uploadLease)
+		return "", "", fmt.Errorf("Could not post media: %s\ndata: %s\n", string(content), uploadLease)
 	}
 
 	mediaURL := fmt.Sprintf("%s/%s", uploadURL, uploadData["key"])
@@ -321,17 +321,17 @@ type SubmitMediaResponse struct {
 func ParseErrors(r *http.Response) error {
 	var content SubmitMediaResponse
 	if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
-		return fmt.Errorf("ERROR: Could not decode response: %s\n", err)
+		return err
 	}
 
 	if len(content.JSON.Errors) > 0 {
-		return fmt.Errorf("ERROR: Could not submit media: %v\n", content.JSON.Errors)
+		return fmt.Errorf("%s", content.JSON.Errors)
 	}
 
 	if content.Message != "" {
-		return fmt.Errorf("ERROR: Could not submit media: %s\n", content.Message)
+		return content.Message
 	}
 
-	fmt.Println("Response Submit Media", content.JSON.Data)
+	// fmt.Println("Response Submit Media", content.JSON.Data)
 	return nil
 }
