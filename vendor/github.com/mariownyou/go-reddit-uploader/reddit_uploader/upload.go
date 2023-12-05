@@ -190,7 +190,11 @@ func (u *Uploader) UploadMedia(mediaPath string) (string, string, error) {
 		uploadData[arg.Name] = arg.Value
 	}
 
-	resp = ReadAndPostMedia(mediaPath, uploadURL, uploadData)
+	resp, err = ReadAndPostMedia(mediaPath, uploadURL, uploadData)
+	if err != nil {
+		return "", "", err
+	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 201 {
@@ -232,7 +236,7 @@ type UploadMediaResponse struct {
 	} `json:"asset"`
 }
 
-func PostFiles(url string, data map[string]string, files ...FilePart) *http.Response {
+func PostFiles(url string, data map[string]string, files ...FilePart) (*http.Response, error) {
 	b := new(bytes.Buffer)
 	w := multipart.NewWriter(b)
 
@@ -243,23 +247,23 @@ func PostFiles(url string, data map[string]string, files ...FilePart) *http.Resp
 	for _, fp := range files {
 		part, err := w.CreateFormFile("file", fp.name)
 		if err != nil {
-			panic(fmt.Errorf("ERROR: Could not create form file: %s\n", err))
+			return nil, fmt.Errorf("Could not create form file: %s\n", err)
 		}
 
 		_, err = io.Copy(part, bytes.NewReader(fp.file))
 		if err != nil {
-			panic(fmt.Errorf("ERROR: Could not write file to form: %s\n", err))
+			return nil, fmt.Errorf("Could not write file to form: %s\n", err)
 		}
 	}
 
 	err := w.Close()
 	if err != nil {
-		panic(fmt.Errorf("ERROR: Could not close multipart form: %s\n", err))
+		return nil, fmt.Errorf("Could not close multipart form: %s\n", err)
 	}
 
 	req, err := http.NewRequest("POST", url, b)
 	if err != nil {
-		panic(fmt.Errorf("ERROR: Could not create a request object: %s\n", err))
+		return nil, fmt.Errorf("Could not create a request object: %s\n", err)
 	}
 
 	req.Header.Set("Content-Type", w.FormDataContentType())
@@ -267,10 +271,10 @@ func PostFiles(url string, data map[string]string, files ...FilePart) *http.Resp
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(fmt.Errorf("ERROR: could not perform a request: %s\n", err))
+		return nil, fmt.Errorf("Could not perform a request: %s\n", err)
 	}
 
-	return resp
+	return resp, nil
 }
 
 type FilePart struct {
@@ -278,7 +282,7 @@ type FilePart struct {
 	name string
 }
 
-func ReadAndPostMedia(mediaPath, uploadURL string, data map[string]string) *http.Response {
+func ReadAndPostMedia(mediaPath, uploadURL string, data map[string]string) (*http.Response, error) {
 	file, err := os.ReadFile(mediaPath)
 	if err != nil {
 		panic(fmt.Errorf("ERROR: Could open the file %s\n", err))
