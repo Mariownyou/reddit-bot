@@ -32,6 +32,9 @@ var (
 	TwitterHashtags          string
 	TwitterReplyText         string
 
+	PocketHostURL   string
+	PocketHostToken string
+
 	UseNativeUplaoder bool
 	SendPreview       bool
 
@@ -94,4 +97,7 @@ func init() {
 	TwitterReplyText = os.Getenv("TWITTER_REPLY_TEXT")
 
 	ExternalServiceURL = os.Getenv("EXTERNAL_SERVICE_URL")
+
+	PocketHostURL = os.Getenv("POCKET_HOST_URL")
+	PocketHostToken = os.Getenv("POCKET_HOST_TOKEN")
 }

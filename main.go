@@ -5,6 +5,7 @@ import (
 	"log"
 	"context"
 
+	"github.com/mariownyou/reddit-bot/db"
 	"github.com/mariownyou/reddit-bot/config"
 	"github.com/mariownyou/reddit-bot/upload"
 	"github.com/mariownyou/go-twitter-uploader/twitter_uploader"
@@ -281,4 +282,13 @@ func (b *Bot) handleStatePostSending(update tgbotapi.Update) {
 	b.Send(updated)
 
 	b.SetState(update, StateDefault)
+
+	db.Record{
+		MediaName: post.FileName,
+		Title: post.Title,
+		File: post.File,
+		Data: map[string]interface{}{
+			"subs": post.Subs,
+		},
+	}.Upload()
 }

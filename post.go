@@ -33,6 +33,7 @@ type Post struct {
 	Subs     map[string]string
 	File     []byte
 	FileType string
+	FileName string
 	Tag      string
 }
 
@@ -45,19 +46,25 @@ func NewPost(bot *Bot, update tgbotapi.Update) *Post {
 		subMap[sub] = EmptySub
 	}
 
-	var fileURL string
-	var filetype string
+	var (
+		fileURL string
+		filetype string
+		filename string
+	)
 
 	switch {
 	case msg.Photo != nil:
 		filetype = upload.SubmissionTypeImage
 		fileURL = msg.Photo[len(msg.Photo)-1].FileID
+		filename = msg.Photo[len(msg.Photo)-1].FileUniqueID
 	case msg.Video != nil:
 		filetype = upload.SubmissionTypeVideo
 		fileURL = msg.Video.FileID
+		filename = msg.Video.FileName
 	case msg.Animation != nil:
 		filetype = upload.SubmissionTypeGif
 		fileURL = msg.Animation.FileID
+		filename = msg.Animation.FileUniqueID
 	}
 
 	var file []byte
@@ -75,6 +82,7 @@ func NewPost(bot *Bot, update tgbotapi.Update) *Post {
 		Subs: subMap,
 		File: file,
 		FileType: filetype,
+		FileName: filename,
 		Tag:  "\n\\#post",
 	}
 }
