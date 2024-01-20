@@ -13,6 +13,7 @@ import (
 	"mime/multipart"
 
 	"github.com/mariownyou/reddit-bot/config"
+	"github.com/mariownyou/reddit-bot/upload"
 	"github.com/mariownyou/reddit-bot/logger"
 )
 
@@ -29,6 +30,7 @@ type Record struct {
 	Title      string `json:"title"`
 
 	File       []byte
+	Preview    []byte
 
 	Data       map[string]interface{} `json:"data"`
 }
@@ -40,6 +42,14 @@ func (r Record) Upload() {
 	filename := r.MediaName
 	if !strings.Contains(filename, ".") {
 		filename += ".jpg"
+	} else {
+		preview, err := upload.GetPreviewFileFromBytes(r.File)
+		if err != nil {
+			log.Println("here")
+			log.Fatal(err)
+		}
+
+		r.Preview = preview
 	}
 
 	if id := IsFileUploaded(filename); id != nil {
@@ -49,6 +59,11 @@ func (r Record) Upload() {
 
 	part, _ := writer.CreateFormFile("media", filename)
 	io.Copy(part, bytes.NewReader(r.File))
+
+	if r.Preview != nil {
+		part, _ := writer.CreateFormFile("preview", "preview.jpg")
+		io.Copy(part, bytes.NewReader(r.Preview))
+	}
 
 	writer.WriteField("title", r.Title)
 	writer.WriteField("media_name", filename)

@@ -273,13 +273,32 @@ func (c *RedditClient) Submit(out chan string, p reddit_uploader.Submission, fil
 }
 
 func GetPreviewFile(filename string) (string, error) {
-	cmd := exec.Command("ffmpeg", "-i", filename, "-vframes", "1", "preview.jpg")
+	cmd := exec.Command("ffmpeg", "-i", filename, "-vframes", "1", PreviewFilename)
 	err := cmd.Run()
 	if err != nil {
 		return "", err
 	}
 
 	return PreviewFilename, nil
+}
+
+func GetPreviewFileFromBytes(file []byte) ([]byte, error) {
+	os.Remove(PreviewFilename)
+
+	name := getRandomName() + ".mp4"
+	err := os.WriteFile(name, file, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	preview, err := GetPreviewFile(name)
+	if err != nil {
+		return nil, err
+	}
+
+	defer os.Remove(name)
+	defer os.Remove(preview)
+	return os.ReadFile(preview)
 }
 
 func check(e error) {
