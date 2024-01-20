@@ -16,6 +16,9 @@ const (
 
 	PreviewFilename = "preview.jpg"
 	GifFilename     = "gif.gif"
+
+	StatusOK = "✅"
+	StatusError = "❌"
 )
 
 type Submission struct {
@@ -75,7 +78,7 @@ func (s *Submission) Submit() SubmitStatus {
 		if err != nil {
 			return SubmitStatus{
 				Success: false,
-				Message: "❌" + string(out) + err.Error(),
+				Message: StatusError + string(out) + err.Error(),
 			}
 		}
 
@@ -86,13 +89,13 @@ func (s *Submission) Submit() SubmitStatus {
 	if err != nil {
 		return SubmitStatus{
 			Success: false,
-			Message: "❌" + CleanString(err.Error()),
+			Message: StatusError + CleanString(err.Error()),
 		}
 	}
 
 	return SubmitStatus{
 		Success: true,
-		Message: "✅",
+		Message: StatusOK,
 	}
 }
 

@@ -6,8 +6,10 @@ import (
 	"time"
 	"context"
 	"strings"
+	"math/rand"
 
 	"github.com/mariownyou/reddit-bot/upload"
+	"github.com/mariownyou/reddit-bot/config"
 	"github.com/mariownyou/go-reddit-uploader/reddit_uploader"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -120,6 +122,10 @@ func (p *Post) Submit() chan map[string]upload.SubmitStatus {
 }
 
 func (p *Post) SubmitOne(sub, flair string) upload.SubmitStatus {
+	if config.Debug {
+		return randomSubmitStatus()
+	}
+
 	submission := upload.NewSubmission(
 		reddit_uploader.Submission{
 			Title: p.Title,
@@ -304,4 +310,12 @@ func GetEndOfLine(text []rune) int {
 		}
 	}
 	return len(text)
+}
+
+func randomSubmitStatus() upload.SubmitStatus {
+	r := rand.Intn(2)
+	if r == 0 {
+		return upload.SubmitStatus{Success: true, Message: upload.StatusOK + " debug"}
+	}
+	return upload.SubmitStatus{Success: false, Message: upload.StatusError + " debug"}
 }

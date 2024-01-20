@@ -98,6 +98,7 @@ func main() {
 	bot.Debug = config.Debug
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
+	log.Printf("Debug mode: %v", bot.Debug)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -144,15 +145,36 @@ func main() {
 				post.Subs = subs
 				session.post = post
 
+				if config.Debug {
+					id := bot.GetChatID(update)
+					m := ""
+					for s, f := range post.Subs {
+						m += fmt.Sprintf("%s: %s\n", s, f)
+					}
+					bot.Send(tgbotapi.NewMessage(id, m))
+				}
+
 				bot.SetState(update, StatePostSending)
 				go bot.handleStatePostSending(update)
 			case CallbackCancel:
 				session.post.Cancel()
 			case CallbackFService:
+				if config.Debug {
+					id := bot.GetChatID(update)
+					bot.Send(tgbotapi.NewMessage(id, "External service is not available in debug mode"))
+					break
+				}
+
 				post := NewRepost(bot, update)
 				mt := upload.GetMimetype(post.FileType)
 				upload.UploadFile(config.ExternalServiceURL, post.Title, mt, post.File)
 			case CallbackTwitter:
+				if config.Debug {
+					id := bot.GetChatID(update)
+					bot.Send(tgbotapi.NewMessage(id, "Twitter is not available in debug mode"))
+					break
+				}
+
 				twitter := twitter_uploader.New(
 					config.TwitterConsumerKey,
 					config.TwitterConsumerSecret,

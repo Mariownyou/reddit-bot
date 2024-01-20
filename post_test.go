@@ -44,3 +44,8 @@ func TestParsePostMessage(t *testing.T) {
 		}
 	}
 }
+
+func TestRandomSubmitStatus(t *testing.T) {
+	status := randomSubmitStatus()
+	t.Logf("Random status: %v", status)
+}
