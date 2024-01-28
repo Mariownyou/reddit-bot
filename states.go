@@ -9,4 +9,5 @@ const (
 	StatePostPreparing
 	StateFlairSelect
 	StateFlairConfirm
+	StateRepost
 )

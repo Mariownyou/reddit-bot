@@ -20,6 +20,11 @@ const (
 	CallbackFService     = "f-service"
 )
 
+const (
+	YesOption = "Yes"
+	NoOption  = "No"
+)
+
 type Session struct {
 	post    *Post
 	state   State
@@ -118,6 +123,8 @@ func main() {
 			switch session.state {
 			case StateDefault:
 				bot.handleStateDefault(update)
+			case StateRepost:
+				bot.handleStateRepost(update)
 			case StateFlairSelect:
 				bot.handleStateFlairSelect(update)
 			case StateFlairConfirm:
@@ -195,9 +202,59 @@ func main() {
 
 func (b *Bot) handleStateDefault(update tgbotapi.Update) {
 	b.GetSession(update).replyID = update.Message.MessageID
-	b.SetPost(update, NewPost(b, update))
+
+	post := NewPost(b, update)
+	b.SetPost(update, post)
+
+	if r := db.IsFileUploaded(post.FileName); r != nil {
+		log.Printf("File %s already uploaded", post.FileName, r.Data["subs"])
+		text := "You already uploaded this file to following subreddits:\n"
+		for sub, flair := range r.Data["subs"].(map[string]interface{}) {
+			flair := flair.(string)
+			if flair == "" {
+				flair = NoFlair
+			}
+			text += fmt.Sprintf("%s: %s\n", sub, flair)
+		}
+
+		text += "Do you want to repost with this flairs?"
+		keyboard := []tgbotapi.KeyboardButton{
+			tgbotapi.NewKeyboardButton(YesOption),
+			tgbotapi.NewKeyboardButton(NoOption),
+		}
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+		msg.ReplyMarkup = tgbotapi.NewOneTimeReplyKeyboard(keyboard)
+
+		b.Send(msg)
+		b.SetState(update, StateRepost)
+		return
+	}
+
 	b.SetState(update, StateFlairSelect)
 	b.handleStateFlairSelect(update)
+}
+
+func (b *Bot) handleStateRepost(update tgbotapi.Update) {
+	post := b.GetPost(update)
+
+	if update.Message.Text == YesOption {
+		r := db.IsFileUploaded(post.FileName)
+		subs := map[string]string{}
+		for sub, flair := range r.Data["subs"].(map[string]interface{}) {
+			subs[sub] = flair.(string)
+		}
+
+		post.Subs = subs
+		b.SetPost(update, post)
+
+		b.SetState(update, StatePostSending)
+		go b.handleStatePostSending(update)
+
+	} else {
+		b.SetPost(update, post)
+		b.SetState(update, StateFlairSelect)
+		b.handleStateFlairSelect(update)
+	}
 }
 
 func (b *Bot) handleStateFlairSelect(update tgbotapi.Update) {

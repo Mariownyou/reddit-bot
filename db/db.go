@@ -39,21 +39,18 @@ func (r Record) Upload() {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	filename := r.MediaName
-	if !strings.Contains(filename, ".") {
-		filename += ".jpg"
-	} else {
+	filename := GetFileName(r.MediaName)
+	if strings.Contains(r.MediaName, ".") {
 		preview, err := upload.GetPreviewFileFromBytes(r.File)
 		if err != nil {
-			log.Println("here")
 			log.Fatal(err)
 		}
 
 		r.Preview = preview
 	}
 
-	if id := IsFileUploaded(filename); id != nil {
-		r.Update(*id)
+	if record := IsFileUploaded(filename); record != nil {
+		r.Update(record.ID)
 		return
 	}
 
@@ -112,9 +109,10 @@ type Response struct {
 	Items []Record
 }
 
-func IsFileUploaded(MediaName string) *string {
+func IsFileUploaded(name string) *Record {
+	name = GetFileName(name)
 	params := url.Values{}
-	params.Add("filter", fmt.Sprintf("(media_name='%s')", MediaName))
+	params.Add("filter", fmt.Sprintf("(media_name='%s')", name))
 
 	url := root + records + "?" + params.Encode()
 
@@ -146,5 +144,13 @@ func IsFileUploaded(MediaName string) *string {
 	if len(response.Items) == 0 {
 		return nil
 	}
-	return &response.Items[0].ID
+	return &response.Items[0]
+}
+
+func GetFileName(n string) string {
+	if !strings.Contains(n, ".") {
+		n += ".jpg"
+	}
+
+	return n
 }
